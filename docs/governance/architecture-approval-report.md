@@ -6,21 +6,21 @@
 
 ---
 
-## Status update — Architecture Baseline v1.0
+## Status update — Architecture Baseline v1.0, then Milestone 0 execution
 
-Following this report, [docs/architecture/00-INDEX.md](../architecture/00-INDEX.md) was published as **Architecture Baseline v1.0**, merging the closeable conditions below directly into the master plan's phase documents (full changelog in the baseline's own index). Status as of that publication:
+Following this report, [docs/architecture/00-INDEX.md](../architecture/00-INDEX.md) was published as **Architecture Baseline v1.0**, merging the closeable conditions into the master plan's phase documents. Milestone 0 (Foundation) engineering work then executed the repository-level conditions that documentation alone couldn't close. Current status:
 
 | Item | Status | Evidence |
 |---|---|---|
 | Condition C-1 (docs taxonomy) | **CLOSED** | [repo-audit/03-target-structure.md](../repo-audit/03-target-structure.md) and [architecture/03-repository-structure.md](../architecture/03-repository-structure.md) both now specify `{architecture/, repo-audit/, governance/, security/, deployment/, api/, policy/}` |
 | Condition C-2 (merge review findings into master plan) | **CLOSED** | All six items merged — see the Baseline v1.0 changelog in [architecture/00-INDEX.md](../architecture/00-INDEX.md) — Planner/§5.2.1, citation verification/§6.1, extraction-not-fork/§4.1–4.2, agent→service reclassification/§5.10–5.14, model-tiering/§4.6.1 |
-| Condition C-3 (`enterprise/` removal PR) | **STILL OPEN** | This is a repository action (deleting files, opening a PR), not a documentation change — outside the scope of a documentation baseline update. Tracked in [repo-audit/04-migration-plan.md](../repo-audit/04-migration-plan.md) Phase 1–2, still pending execution. |
-| Condition C-4 (legal sign-off on licensing) | **STILL OPEN** | Outside engineering's authority to close by any documentation change. Tracked in `docs/policy/` per [architecture/11-security-architecture.md](../architecture/11-security-architecture.md) §11.7. |
-| Condition C-5 (Dify database separation decision) | **CLOSED** | [architecture/09-knowledge-architecture.md](../architecture/09-knowledge-architecture.md) §9.1.1 now states the decision explicitly: separate database instance |
-| Mandatory Change 1 (Market Agent query sanitization + network-policy egress) | **CLOSED (specified)** | [architecture/06-tool-architecture.md](../architecture/06-tool-architecture.md) §6.6, [architecture/11-security-architecture.md](../architecture/11-security-architecture.md) §11.7, [architecture/05-agent-architecture.md](../architecture/05-agent-architecture.md) §5.7.1. Specified, not yet implemented or tested — [architecture/14-roadmap.md](../architecture/14-roadmap.md) Milestone 3 acceptance criteria now require a red-team test confirming this before that milestone is considered done. |
-| Mandatory Change 2 (market-cache approval gate) | **CLOSED (specified)** | [architecture/09-knowledge-architecture.md](../architecture/09-knowledge-architecture.md) §9.7. Same caveat as above — specified in the baseline, verified at Milestone 3. |
+| Condition C-3 (`enterprise/` removal) | **CLOSED** | `enterprise/` and its CI/config surface (10 workflow/config files trimmed or removed) deleted in the Milestone 0 scaffold commit (`df8fe44`). Executed against a git history that did not previously exist for this repository — see the Milestone 0 status report for the safety measure taken before this destructive action. |
+| Condition C-4 (legal sign-off on licensing) | **STILL OPEN** | Outside engineering's authority to close by any documentation or code change. Tracked in `docs/policy/` per [architecture/11-security-architecture.md](../architecture/11-security-architecture.md) §11.7. **This is now the only unclosed condition.** |
+| Condition C-5 (Dify database separation decision) | **CLOSED (documented AND implemented)** | [architecture/09-knowledge-architecture.md](../architecture/09-knowledge-architecture.md) §9.1.1 states the decision; `shared/config/settings.py`'s `DatabaseSettings` (two distinct DSNs) and `infrastructure/compose/docker-compose.mara.yml` (`postgres-primary` / `postgres-dify` as separate containers) implement it, verified by `tests/unit/mara/test_settings.py::test_primary_and_dify_databases_are_distinct_instances`. |
+| Mandatory Change 1 (Market Agent query sanitization + network-policy egress) | **Specified, not yet implemented** | [architecture/06-tool-architecture.md](../architecture/06-tool-architecture.md) §6.6, [architecture/05-agent-architecture.md](../architecture/05-agent-architecture.md) §5.7.1. Correctly out of scope for Milestone 0 (no Market Agent exists yet) — remains a Milestone 3 gate per [architecture/14-roadmap.md](../architecture/14-roadmap.md). |
+| Mandatory Change 2 (market-cache approval gate) | **Specified, not yet implemented** | [architecture/09-knowledge-architecture.md](../architecture/09-knowledge-architecture.md) §9.7. Same status and reasoning as above — a Milestone 3 gate, not a Milestone 0 one. |
 
-"Closed" above means **the documentation now reflects the corrected, binding decision** — it does not mean the corresponding code exists yet, since no implementation has started. Milestone 0's acceptance criteria ([architecture/14-roadmap.md](../architecture/14-roadmap.md) §14.2) still require C-3 to be independently verified as merged before Milestone 0 itself is considered complete; this status table is not a substitute for that check.
+Full detail on what was built, what was verified, and what remains for Milestone 0 to be fully complete: see the Milestone 0 engineering scaffold commit (`fdfd3a1`) and its commit message.
 
 ---
 
