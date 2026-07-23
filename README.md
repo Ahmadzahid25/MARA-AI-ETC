@@ -42,4 +42,16 @@ Full rationale in [`docs/architecture/03-repository-structure.md`](docs/architec
 
 ## Status
 
-Milestone 0 (Foundation) is in progress. See [`docs/architecture/14-roadmap.md`](docs/architecture/14-roadmap.md) for the full roadmap and [`docs/governance/architecture-approval-report.md`](docs/governance/architecture-approval-report.md) for current gate status.
+**Currently on: Milestone 0 — Foundation** (of 7 milestones, `docs/architecture/14-roadmap.md` §14.2–§14.8). This is the single place to check "where are we" — update this block, not just the docs, whenever milestone status changes.
+
+| Milestone 0 item | Status |
+|---|---|
+| ACCB Conditions C-1, C-2, C-3, C-5 | ✅ Closed |
+| ACCB Condition C-4 (legal sign-off on OpenHands license) | ⏳ Open — not engineering's to close |
+| Repo structure, Gateway, LangGraph checkpointer, model-tiering, compose files, CI | ✅ Built and code-verified (lint + real tests passing) |
+| Actually deployed / running (Docker stack up, Keycloak SSO login, trace visible in Grafana) | ❌ Not done — no Docker available in the environment that built this; needs to be run and verified before Milestone 0 counts as complete |
+| Milestone 1 (Document Agent) | Not started |
+
+Full detail: [`docs/architecture/14-roadmap.md`](docs/architecture/14-roadmap.md) (roadmap + acceptance criteria) and [`docs/governance/architecture-approval-report.md`](docs/governance/architecture-approval-report.md) (ACCB gate conditions, kept current).
+
+**Everything above is local-only** — this repository has not been pushed to any remote (no `origin` configured). All work exists as commits on `git log` in this checkout.
