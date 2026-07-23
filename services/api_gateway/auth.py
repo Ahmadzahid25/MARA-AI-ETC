@@ -61,7 +61,7 @@ class _JwksCache:
 
     async def get(self, settings: Settings) -> JsonWebKey:
         now = time.monotonic()
-        if self._jwk_set is None or (now - self._fetched_at) > self._ttl_seconds:
+        if self._jwk_set is None or (now - self._fetched_at) >= self._ttl_seconds:
             jwks_url = (
                 f'{settings.auth.keycloak_server_url}/realms/'
                 f'{settings.auth.keycloak_realm}/protocol/openid-connect/certs'
@@ -92,7 +92,11 @@ async def get_current_principal(
         jwk_set = await _jwks_cache.get(settings)
         claims: JWTClaims = _jwt.decode(credentials.credentials, key=jwk_set)
         claims.validate()  # exp/nbf/iat
-    except (JoseError, httpx.HTTPError) as exc:
+    except (JoseError, httpx.HTTPError, ValueError) as exc:
+        # authlib raises a plain ValueError (not JoseError) when a token's
+        # `kid` doesn't match any key in the JWKS — e.g. key_set.find_by_kid.
+        # Must be caught here too, or an unrecognized kid crashes with an
+        # unhandled 500 instead of the documented 401.
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail='Invalid or expired credentials',

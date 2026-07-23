@@ -116,7 +116,7 @@ dependencies = [
   "pydantic>=2.9,<3.0",
   "pydantic-settings>=2.6,<3.0",
   "opentelemetry-sdk==1.39.1",
-  "opentelemetry-instrumentation-fastapi>=0.60,<1.0",
+  "opentelemetry-instrumentation-fastapi>=0.60b0,<1.0",
 ]
 
 urls.Homepage = "https://github.com/OpenHands/OpenHands"
@@ -281,7 +281,7 @@ langgraph-checkpoint-postgres = ">=2.0,<3.0"
 pydantic = ">=2.9,<3.0"
 pydantic-settings = ">=2.6,<3.0"
 opentelemetry-sdk = "1.39.1"
-opentelemetry-instrumentation-fastapi = ">=0.60,<1.0"
+opentelemetry-instrumentation-fastapi = ">=0.60b0,<1.0"
 
 [tool.poetry.group.dev]
 optional = true

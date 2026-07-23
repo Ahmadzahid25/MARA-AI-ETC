@@ -21,7 +21,9 @@ def test_every_true_agent_has_an_assigned_tier() -> None:
 
 
 def test_recommendation_agent_is_the_only_high_stakes_tier_agent() -> None:
-    high_stakes_agents = [agent for agent, tier in AGENT_TIER.items() if tier == ModelTier.HIGH_STAKES]
+    high_stakes_agents = [
+        agent for agent, tier in AGENT_TIER.items() if tier == ModelTier.HIGH_STAKES
+    ]
     assert high_stakes_agents == [AgentName.RECOMMENDATION]
 
 

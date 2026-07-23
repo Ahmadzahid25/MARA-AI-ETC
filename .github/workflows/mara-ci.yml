@@ -45,9 +45,9 @@ jobs:
         with:
           enable-cache: true
       - name: ruff check
-        run: uvx ruff check --select ASYNC,B,E,F,I,Q,UP006,UP007,UP008,W agents tools services workflows shared
+        run: uvx ruff check --select ASYNC,B,E,F,I,Q,UP006,UP007,UP008,W agents tools services workflows shared tests/unit/mara
       - name: ruff format --check
-        run: uvx ruff format --check agents tools services workflows shared
+        run: uvx ruff format --check agents tools services workflows shared tests/unit/mara
 
   test:
     name: Unit tests
