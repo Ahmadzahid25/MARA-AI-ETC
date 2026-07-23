@@ -1,5 +1,8 @@
-# Workflow that builds and pushes the OpenHands app and enterprise Docker images to ghcr.io.
+# Workflow that builds and pushes the OpenHands app Docker image to ghcr.io.
 # Per-image build logic lives in .github/workflows/_build-image.yml.
+# Note: the upstream "enterprise" image build job was removed along with enterprise/
+# (ACCB Condition C-3, docs/repo-audit/02-problems-found.md P-01) — that directory was
+# OpenHands' own commercial SaaS surface, not part of MARA AI-ETC.
 name: Docker
 
 on:
@@ -29,19 +32,6 @@ jobs:
     with:
       image: ghcr.io/openhands/openhands
       dockerfile: containers/app/Dockerfile
-
-  build_enterprise:
-    name: Enterprise
-    if: github.event.pull_request.head.repo.fork != true
-    needs: build_app
-    uses: ./.github/workflows/_build-image.yml
-    with:
-      image: ghcr.io/openhands/enterprise-server
-      dockerfile: enterprise/Dockerfile
-      extra-build-args: OPENHANDS_VERSION=sha-${{ github.event.pull_request.head.sha || github.sha }}
-      provenance: true
-      sbom: true
-      buildx-driver-opts: network=host
 
   update_pr_description:
     name: Update PR Description

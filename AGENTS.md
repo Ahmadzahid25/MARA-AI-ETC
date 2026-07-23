@@ -1,3 +1,24 @@
+# MARA AI-ETC — read this first
+
+This repository is **MARA AI-ETC** (MARA AI Entrepreneurship Transformation Centre), built on an OpenHands checkout. Before touching any code, read [`docs/architecture/00-INDEX.md`](docs/architecture/00-INDEX.md) — **Architecture Baseline v1.0**, the current approved source of truth for this platform's design, agents, tools, workflows, and repository structure. The sections below this point describe the underlying OpenHands codebase itself and remain accurate for that substrate; they are not MARA AI-ETC's own product documentation.
+
+## Naming disambiguation — "agent" means four different things in this repo
+
+| Path | What it actually is | Who edits it |
+|---|---|---|
+| `.openhands/microagents/` | OpenHands *product* feature — runtime microagent behavior for the coding assistant itself | Platform team, rarely |
+| `skills/` (root) | OpenHands' own general coding-assistant skill library | Platform team, synced loosely with upstream |
+| `.agents/skills/` | This-repo-specific coding-assistant instructions (release process, cross-repo testing) | Whoever owns repo/release tooling |
+| `agents/` | **MARA's domain agents** (Document, Compliance, Finance, Risk, Market, Recommendation, Planner) — the actual MARA AI-ETC product, per [`docs/architecture/05-agent-architecture.md`](docs/architecture/05-agent-architecture.md) | Agents team |
+
+Full rationale: [`docs/repo-audit/03-target-structure.md`](docs/repo-audit/03-target-structure.md) §3.3.
+
+## OpenHands substrate — read before modifying `openhands/`, `frontend/`, `containers/`, `kind/`
+
+`openhands/app_server/*` is extracted and depended on as a library boundary, not forked-and-modified in place; `openhands/server/` is legacy ("V0") reference only. See [`docs/repo-audit/06-openhands-protection-rules.md`](docs/repo-audit/06-openhands-protection-rules.md) for the full must-not-modify / should-extend / should-wrap table before changing anything under these paths.
+
+---
+
 This repository contains the code for OpenHands, an automated AI software engineer. It has a Python backend
 (in the `openhands` directory) and React frontend (in the `frontend` directory).
 

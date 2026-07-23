@@ -8,7 +8,9 @@ processors:
   - type: crossref
 renderer:
   type: docusaurus
-  docs_base_path: docs/modules
+  docs_base_path: docs/api
   relative_output_path: python
   relative_sidebar_path: sidebar.json
   sidebar_top_level_label: Backend
+  # Output path aligned to the docs/api/ taxonomy slot per Architecture Baseline v1.0
+  # (docs/architecture/03-repository-structure.md) - not OpenHands' own docs.all-hands.dev site.
