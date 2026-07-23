@@ -8,7 +8,7 @@ on:
       - main
   pull_request:
     paths:
-      - 'openhands-ui/**'
+      - 'packages/openhands-ui/**'
       -  '.github/workflows/ui-build.yml'
 
 # If triggered by a PR, it will be in the same group. However, each commit on main will be in its own unique group
@@ -25,10 +25,10 @@ jobs:
         uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version-file: "openhands-ui/.bun-version"
+          bun-version-file: "packages/openhands-ui/.bun-version"
       - name: Install dependencies
-        working-directory: ./openhands-ui
+        working-directory: ./packages/openhands-ui
         run: bun install --frozen-lockfile
       - name: Build package
-        working-directory:  ./openhands-ui
+        working-directory:  ./packages/openhands-ui
         run: bun run build

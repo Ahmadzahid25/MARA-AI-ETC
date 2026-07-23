@@ -7,7 +7,7 @@ on:
     branches:
       - main
     paths:
-      - "openhands-ui/**"
+      - "packages/openhands-ui/**"
       - ".github/workflows/npm-publish-ui.yml"
 
 # If triggered by a PR, it will be in the same group. However, each commit on main will be in its own unique group
@@ -35,13 +35,13 @@ jobs:
         id: version-check
         run: |
           # Get current version from package.json
-          CURRENT_VERSION=$(jq -r .version openhands-ui/package.json)
+          CURRENT_VERSION=$(jq -r .version packages/openhands-ui/package.json)
           echo "current-version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
           # Check if package.json version changed in this commit
-          if git diff HEAD~1 HEAD --name-only | grep -q "openhands-ui/package.json"; then
+          if git diff HEAD~1 HEAD --name-only | grep -q "packages/openhands-ui/package.json"; then
             # Check if the version field specifically changed
-            if git diff HEAD~1 HEAD openhands-ui/package.json | grep -q '"version"'; then
+            if git diff HEAD~1 HEAD packages/openhands-ui/package.json | grep -q '"version"'; then
               echo "Version changed in package.json, will publish"
               echo "should-publish=true" >> $GITHUB_OUTPUT
             else
@@ -68,19 +68,19 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
-          bun-version-file: "openhands-ui/.bun-version"
+          bun-version-file: "packages/openhands-ui/.bun-version"
 
       - name: Install dependencies
-        working-directory: ./openhands-ui
+        working-directory: ./packages/openhands-ui
         run: bun install --frozen-lockfile
 
       - name: Build package
-        working-directory: ./openhands-ui
+        working-directory: ./packages/openhands-ui
         run: bun run build
 
       - name: Check if package already exists on npm
         id: npm-check
-        working-directory: ./openhands-ui
+        working-directory: ./packages/openhands-ui
         env:
           CURRENT_VERSION: ${{ needs.check-version.outputs.current-version }}
         run: |
@@ -105,7 +105,7 @@ jobs:
 
       - name: Publish to npm
         if: steps.npm-check.outputs.already-exists == 'false'
-        working-directory: ./openhands-ui
+        working-directory: ./packages/openhands-ui
         env:
           CURRENT_VERSION: ${{ needs.check-version.outputs.current-version }}
         run: |

@@ -1,0 +1,134 @@
+# MARA AI-ETC core data-plane services for local development.
+#
+# Additive alongside OpenHands' own root docker-compose.yml — never edits it
+# (docs/repo-audit/06-openhands-protection-rules.md §6.1). Compose with:
+#
+#   docker compose -f docker-compose.yml \
+#                   -f infrastructure/compose/docker-compose.mara.yml \
+#                   up -d
+#
+# Two Postgres instances by design, not one: postgres-primary is the
+# platform's own transactional store (conversations/tasks/shared/audit
+# memory, LangGraph workflow checkpoints, pgvector); postgres-dify is a
+# fully separate instance for Dify's own operational database. This
+# separation closes ACCB Condition C-5 / Review Board Finding C2 — see
+# docs/architecture/09-knowledge-architecture.md §9.1.1. Do not point both
+# at the same instance/database "to save resources" — that recreates the
+# exact coupling risk this design decision exists to avoid.
+#
+# Defaults here match configs/dev/settings.toml. This file has not been run
+# in this environment (no Docker available at scaffold time) — validate with
+# `docker compose config` and a local `up` before relying on it.
+
+services:
+  postgres-primary:
+    image: pgvector/pgvector:pg16
+    container_name: mara-postgres-primary
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: mara
+      POSTGRES_DB: mara_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - mara_postgres_primary_data:/var/lib/postgresql/data
+      - ./init/postgres-primary-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mara -d mara_platform"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres-dify:
+    image: postgres:16-alpine
+    container_name: mara-postgres-dify
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dify
+      POSTGRES_PASSWORD: dify
+      POSTGRES_DB: dify
+    ports:
+      - "5433:5432"
+    volumes:
+      - mara_postgres_dify_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dify -d dify"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: mara-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - mara_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: mara-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: mara-dev
+      MINIO_ROOT_PASSWORD: mara-dev-secret
+    ports:
+      - "9000:9000" # S3 API
+      - "9001:9001" # Web console
+    volumes:
+      - mara_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio-init:
+    image: minio/mc:latest
+    container_name: mara-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set mara-local http://minio:9000 mara-dev mara-dev-secret &&
+      mc mb -p mara-local/mara-documents &&
+      echo 'bucket ready'
+      "
+    restart: "no"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    container_name: mara-keycloak
+    restart: unless-stopped
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin-dev-only
+      KC_DB: dev-file # dev-only; production Keycloak must use its own managed Postgres,
+      # NOT postgres-primary or postgres-dify above (see docs/architecture/
+      # 04-technology-stack.md §4.4 — Keycloak is reused directly, but as its
+      # own service with its own datastore, same isolation principle as Dify).
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./init/keycloak-realm-mara-ai-etc.json:/opt/keycloak/data/import/realm.json:ro
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mara_postgres_primary_data:
+  mara_postgres_dify_data:
+  mara_redis_data:
+  mara_minio_data:

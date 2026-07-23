@@ -1,0 +1,19 @@
+# Auto-provisioned Grafana datasources for local dev — one pane of glass
+# across Prometheus (metrics) and Loki (logs), per docs/architecture/
+# 12-observability.md §12.4. Langfuse is a separate UI (port 3300), not a
+# Grafana datasource — see docs/architecture/12-observability.md §12.8 for
+# why LLM-specific observability is a distinct tool, not folded into Grafana.
+
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100

@@ -1,0 +1,106 @@
+# MARA AI-ETC observability stack — docs/architecture/12-observability.md.
+#
+# Separate compose file from docker-compose.mara.yml (data plane) since these
+# are genuinely optional for a minimal local dev loop but required for
+# Milestone 0's "synthetic end-to-end trace visible in Grafana/Langfuse"
+# acceptance criterion (docs/architecture/14-roadmap.md §14.2). Compose with:
+#
+#   docker compose -f docker-compose.yml \
+#                   -f infrastructure/compose/docker-compose.mara.yml \
+#                   -f infrastructure/compose/docker-compose.observability.yml \
+#                   up -d
+#
+# Retention here is deliberately short/operational, not audit-grade — see
+# docs/architecture/12-observability.md §12.11 for why observability data and
+# Audit Memory (postgres-primary, docker-compose.mara.yml) have different
+# retention policies on purpose.
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    container_name: mara-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./init/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC — matches configs/dev/settings.toml observability.otel_exporter_endpoint
+      - "4318:4318" # OTLP HTTP
+    depends_on:
+      - loki
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mara-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./init/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - mara_prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+
+  loki:
+    image: grafana/loki:latest
+    container_name: mara-loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - mara_loki_data:/loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mara-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin-dev-only
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+    ports:
+      - "3000:3000"
+    volumes:
+      - mara_grafana_data:/var/lib/grafana
+      - ./init/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+    depends_on:
+      - prometheus
+      - loki
+
+  langfuse:
+    image: langfuse/langfuse:latest
+    container_name: mara-langfuse
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://langfuse:langfuse@langfuse-db:5432/langfuse
+      NEXTAUTH_SECRET: dev-only-not-for-production
+      SALT: dev-only-not-for-production
+      NEXTAUTH_URL: http://localhost:3300
+    ports:
+      - "3300:3000"
+    depends_on:
+      langfuse-db:
+        condition: service_healthy
+
+  langfuse-db:
+    image: postgres:16-alpine
+    container_name: mara-langfuse-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: langfuse
+      POSTGRES_PASSWORD: langfuse
+      POSTGRES_DB: langfuse
+    volumes:
+      - mara_langfuse_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U langfuse -d langfuse"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    # Fourth Postgres instance in the local stack (primary, dify, langfuse,
+    # and Keycloak's dev-file store) — each service owns its own database,
+    # the same isolation principle applied consistently, not just for Dify.
+
+volumes:
+  mara_prometheus_data:
+  mara_loki_data:
+  mara_grafana_data:
+  mara_langfuse_db_data:

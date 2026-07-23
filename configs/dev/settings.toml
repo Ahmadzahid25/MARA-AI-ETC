@@ -1,0 +1,34 @@
+# MARA AI-ETC — dev environment configuration
+#
+# Non-secret only. Values here are committed to the repository; anything
+# secret (passwords, API keys, client secrets) is supplied via MARA_*
+# environment variables at runtime and MUST NOT be added to this file —
+# see docs/architecture/13-deployment-architecture.md §13.1 and
+# docs/architecture/11-security-architecture.md §11.3.
+#
+# These defaults intentionally match infrastructure/compose/docker-compose.mara.yml
+# so `docker compose up` + this file work together out of the box for local dev.
+
+environment = "dev"
+
+[database]
+primary_dsn = "postgresql+asyncpg://mara:mara@localhost:5432/mara_platform"
+dify_dsn = "postgresql+asyncpg://dify:dify@localhost:5433/dify"
+
+[object_storage]
+endpoint_url = "http://localhost:9000"
+bucket = "mara-documents"
+secure = false
+
+[redis]
+dsn = "redis://localhost:6379/0"
+
+[auth]
+keycloak_server_url = "http://localhost:8080"
+keycloak_realm = "mara-ai-etc"
+keycloak_client_id = "mara-officer-workspace"
+mfa_required = false  # relaxed only in dev — see docs/architecture/11-security-architecture.md §11.2
+
+[observability]
+otel_exporter_endpoint = "http://localhost:4317"
+langfuse_host = "http://localhost:3300"

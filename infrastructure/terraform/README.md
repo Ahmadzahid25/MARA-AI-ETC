@@ -1,0 +1,5 @@
+# Cloud infrastructure as code
+
+Scaffolded in Milestone 0 (Foundation). Not yet implemented — implementation begins in pre-production.
+
+See [13-deployment-architecture.md#138-cloud-readiness](../../docs/architecture/13-deployment-architecture.md#138-cloud-readiness) for the full specification this module implements. Do not add code here without a corresponding entry in that document, per docs/repo-audit/05-development-guidelines.md §5.5.

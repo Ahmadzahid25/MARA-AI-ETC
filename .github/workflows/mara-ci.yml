@@ -1,0 +1,86 @@
+# CI for MARA AI-ETC's own code (agents/, tools/, services/, workflows/,
+# shared/, tests/unit/mara/) — additive alongside OpenHands' own py-tests.yml
+# and lint.yml, per docs/repo-audit/06-openhands-protection-rules.md §6.1
+# (extend, don't fork the existing pipelines).
+#
+# Path-filtered so this workflow only runs when MARA-specific code changes,
+# keeping it decoupled from OpenHands' own CI cadence.
+name: MARA CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "agents/**"
+      - "tools/**"
+      - "services/**"
+      - "workflows/**"
+      - "shared/**"
+      - "tests/unit/mara/**"
+      - "pyproject.toml"
+      - ".github/workflows/mara-ci.yml"
+  pull_request:
+    paths:
+      - "agents/**"
+      - "tools/**"
+      - "services/**"
+      - "workflows/**"
+      - "shared/**"
+      - "tests/unit/mara/**"
+      - "pyproject.toml"
+      - ".github/workflows/mara-ci.yml"
+
+concurrency:
+  group: mara-ci-${{ github.workflow }}-${{ (github.head_ref && github.ref) || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: ruff check
+        run: uvx ruff check --select ASYNC,B,E,F,I,Q,UP006,UP007,UP008,W agents tools services workflows shared
+      - name: ruff format --check
+        run: uvx ruff format --check agents tools services workflows shared
+
+  test:
+    name: Unit tests
+    runs-on: ubuntu-24.04
+    strategy:
+      matrix:
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+      - name: Sync dependencies
+        run: uv sync --python ${{ matrix.python-version }} --all-extras
+      - name: Run tests/unit/mara
+        env:
+          MARA_ENVIRONMENT: dev
+        run: uv run --python ${{ matrix.python-version }} pytest tests/unit/mara -v
+
+  compose-config:
+    name: Validate compose files
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - name: docker compose config (mara)
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f infrastructure/compose/docker-compose.mara.yml \
+            -f infrastructure/compose/docker-compose.observability.yml \
+            config --quiet
+        # This is the one check from docs/architecture/14-roadmap.md §14.2's
+        # Milestone 0 scope that could NOT be run when this scaffold was
+        # authored (no Docker available in that environment) — this job is
+        # what closes that gap on every PR going forward.

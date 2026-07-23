@@ -1,0 +1,34 @@
+# MARA AI-ETC — staging environment configuration
+#
+# Non-secret only — see configs/dev/settings.toml for the full policy note.
+# Hostnames below are placeholders for the staging cluster's internal service
+# DNS names; update once staging infrastructure (docs/architecture/
+# 13-deployment-architecture.md §13.1) is actually provisioned.
+#
+# Staging never receives real applicant data by default (docs/architecture/
+# 13-deployment-architecture.md §13.1) — this file must not be treated as
+# equivalent-security to production.
+
+environment = "staging"
+
+[database]
+primary_dsn = "postgresql+asyncpg://mara:CHANGEME@postgres-primary.staging.svc.cluster.local:5432/mara_platform"
+dify_dsn = "postgresql+asyncpg://dify:CHANGEME@postgres-dify.staging.svc.cluster.local:5432/dify"
+
+[object_storage]
+endpoint_url = "https://minio.staging.svc.cluster.local:9000"
+bucket = "mara-documents-staging"
+secure = true
+
+[redis]
+dsn = "redis://redis.staging.svc.cluster.local:6379/0"
+
+[auth]
+keycloak_server_url = "https://auth-staging.mara.internal"
+keycloak_realm = "mara-ai-etc"
+keycloak_client_id = "mara-officer-workspace"
+mfa_required = true
+
+[observability]
+otel_exporter_endpoint = "http://otel-collector.staging.svc.cluster.local:4317"
+langfuse_host = "https://langfuse.staging.mara.internal"

@@ -1,0 +1,32 @@
+# MARA AI-ETC — production environment configuration
+#
+# Non-secret only — see configs/dev/settings.toml for the full policy note.
+# This file MUST NOT contain real hostnames, credentials, or endpoints until
+# MARA's actual production infrastructure exists and has passed the Milestone 6
+# security assessment (docs/architecture/14-roadmap.md §14.8). Placeholder
+# values below are intentionally obviously-fake so a config that's never been
+# filled in fails loudly rather than silently pointing at dev/staging.
+
+environment = "production"
+
+[database]
+primary_dsn = "postgresql+asyncpg://REPLACE_ME:REPLACE_ME@REPLACE_ME.production.mara.internal:5432/mara_platform"
+dify_dsn = "postgresql+asyncpg://REPLACE_ME:REPLACE_ME@REPLACE_ME.production.mara.internal:5432/dify"
+
+[object_storage]
+endpoint_url = "https://REPLACE_ME.production.mara.internal:9000"
+bucket = "mara-documents-production"
+secure = true
+
+[redis]
+dsn = "redis://REPLACE_ME.production.mara.internal:6379/0"
+
+[auth]
+keycloak_server_url = "https://REPLACE_ME.production.mara.internal"
+keycloak_realm = "mara-ai-etc"
+keycloak_client_id = "mara-officer-workspace"
+mfa_required = true
+
+[observability]
+otel_exporter_endpoint = "http://REPLACE_ME.production.mara.internal:4317"
+langfuse_host = "https://REPLACE_ME.production.mara.internal"
