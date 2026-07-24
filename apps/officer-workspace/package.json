@@ -13,13 +13,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@floating-ui/react": "^0.27.20",
     "@openhands/ui": "file:../../packages/openhands-ui",
+    "clsx": "^2.1.1",
+    "deep-equal": "^2.2.3",
+    "focus-trap-react": "^12.0.3",
+    "oidc-client-ts": "^3.1.0",
     "react": "^19.1.0",
+    "react-bootstrap-icons": "^1.11.6",
     "react-dom": "^19.1.0",
     "react-router": "^7.17.0",
+    "react-select": "^5.10.2",
+    "sonner": "^2.0.7",
     "tailwind-merge": "^3.3.1",
-    "clsx": "^2.1.1",
-    "oidc-client-ts": "^3.1.0"
+    "tailwind-scrollbar": "^4.0.2"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
