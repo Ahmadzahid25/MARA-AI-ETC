@@ -42,7 +42,9 @@ Full rationale in [`docs/architecture/03-repository-structure.md`](docs/architec
 
 ## Status
 
-**Currently on: Milestone 0 — Foundation** (of 7 milestones, `docs/architecture/14-roadmap.md` §14.2–§14.8). This is the single place to check "where are we" — update this block, not just the docs, whenever milestone status changes.
+**Currently on: Milestone 1 — Document Agent** (of 7 milestones, `docs/architecture/14-roadmap.md` §14.2–§14.8). This is the single place to check "where are we" — update this block, not just the docs, whenever milestone status changes.
+
+### Milestone 0 — Foundation
 
 | Milestone 0 item | Status |
 |---|---|
@@ -52,7 +54,27 @@ Full rationale in [`docs/architecture/03-repository-structure.md`](docs/architec
 | Unit tests for checkpointer, synthetic_trace, auth, gateway app, middleware | ✅ **Actually executed and passing**: `uv run pytest tests/unit/mara` — 50/50 passed. `ruff check`/`format` clean (now includes `tests/unit/mara` in `mara-ci.yml`'s lint job, which previously omitted it). Getting here required fixing a real `opentelemetry-sdk==1.39.1` / `opentelemetry-instrumentation-fastapi>=0.60` version conflict (the fastapi-instrumentation floor excluded the compatible `0.60b1` prerelease under PEP 440 ordering — fixed to `>=0.60b0,<1.0`) plus several real bugs the first successful run surfaced: a `_JwksCache` TTL off-by-one (`>` vs `>=`), a missing `ValueError` catch in `get_current_principal` for unrecognized JWT `kid`s (was an unhandled 500, not the documented 401), an authlib `as_dict()` call missing `is_private=True` (silently exported public-only keys), and a LangGraph checkpointer test mocked with a raw `AsyncMock` that didn't satisfy the real checkpointer protocol (replaced with `InMemorySaver`) |
 | `apps/officer-workspace/` scaffolded (React SPA with Keycloak SSO login, empty workspace) | ✅ `npm install`, `tsc --noEmit`, and `npm run build` all pass (cache redirected off the machine's full `D:` drive). Fixed a broken TS project reference (`packages/openhands-ui` isn't a composite project) that made `build`/`typecheck` fail outright |
 | Actually deployed / running (Docker stack up, Keycloak SSO login, trace visible in Grafana) | ❌ **BLOCKED** — no Docker available in this environment. Compose files exist but have never been run against a real Docker daemon. Must be verified on a machine with Docker before Milestone 0 counts as complete |
-| Milestone 1 (Document Agent) | Not started |
+
+### Milestone 1 — Document Agent (in progress)
+
+`workflows/document_assessment/` scope decision (approved): Compliance Agent
+is pulled into this workflow now, per `07-workflow-architecture.md` §7.3's
+"Document → Compliance" catalogue entry — but its policy-matching logic
+stays an honest stub until `services/knowledge_service` exists (Milestone 2,
+per `14-roadmap.md` §14.4). See `agents/compliance_agent/README.md`.
+
+| Milestone 1 item | Status |
+|---|---|
+| `shared/schemas/` — document extraction, compliance, and approval contracts (`DocumentExtractionRecord`, `ComplianceChecklist`, `ApprovalDecisionInput`, ...) | ✅ Built and tested. Shared contract `apps/officer-workspace/` (frontend) and the backend agents/services both consume — see `apps/officer-workspace/AGENTS.md` |
+| `shared/schemas/` — tool error taxonomy + audit-log stub (`ToolError` family, `ToolInvocationLog`, `log_tool_invocation`) | ✅ Built and tested. Audit sink defaults to structured logging, not a real Audit Memory write — `services/audit_service` doesn't exist yet (tracked with a `TODO(milestone-1)`, reused identically by `services/approval_service`) |
+| `tools/ocr/` — OCR tool (`run_ocr`) | ✅ Timeout/retry/permission/audit-log behavior built and tested against injected fake engines. **No real OCR engine wired** — self-hosted PaddleOCR/Tesseract integration is a separate follow-up task; the default engine raises a clear typed error rather than fabricating results |
+| `tools/documents/` — PDF parse (`parse_pdf`) + document classification (`classify_document`) | ✅ Built and tested against **real `pypdf`-generated PDFs**, not mocks. Native text-layer extraction is real; OCR fallback works when a page-image renderer is injected (none wired by default). Table extraction not implemented — no table-detection library chosen yet. No real document-classifier model wired |
+| `agents/document_agent/` — `DocumentAgent.process_document()` | ✅ Built and tested. Classifies + parses via the tools above, then an LLM call (via `TieredLLMClient`, Document tier) turns raw page text into named, confidence-scored fields. **Not wired into the OpenHands event-stream Agent Runtime** — that integration is a separate, larger task; this agent is directly callable in the meantime |
+| `agents/compliance_agent/` — `ComplianceAgent.check_compliance()` | ✅ Built and tested (Milestone-1 stub, scope decision above). Checklist structure and hard-violation detection are real; policy-matching always resolves to `NO_POLICY_FOUND` until Knowledge Service exists — §5.4's own specified behavior for "no corpus," not a fabricated shortcut |
+| `workflows/document_assessment/` — `build_document_assessment_graph()` | ✅ Built and tested, including a **real** LangGraph `interrupt()`/`Command(resume=...)` durable pause at the "confirm extraction" gate (verified with `InMemorySaver`, not mocked) — Document Agent → Validation → confirm-extraction pause → Compliance Agent (on approval) → Completion. A rejected extraction currently routes to Completion without an automatic targeted re-run (named simplification, not silently dropped) |
+| `services/approval_service/` — `confirm_extraction()` | ✅ Built and tested, including an **end-to-end integration test** resuming a real compiled workflow graph (not just a mocked one). All three actions (Approve/Reject/**Correct**) implemented per `10-human-in-the-loop.md` §10.5; a Correct action's field corrections verifiably reach the workflow's `extraction_record`, not just the audit log |
+| Real Audit Memory write path (`services/audit_service`) | ❌ Not started — tool and approval audit logs currently fall back to structured logging only |
+| Test suite | ✅ 148/148 passing (`uv run pytest tests/unit/mara`), `ruff check`/`format` clean |
 
 Full detail: [`docs/architecture/14-roadmap.md`](docs/architecture/14-roadmap.md) (roadmap + acceptance criteria) and [`docs/governance/architecture-approval-report.md`](docs/governance/architecture-approval-report.md) (ACCB gate conditions, kept current).
 

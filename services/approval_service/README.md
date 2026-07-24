@@ -1,5 +1,24 @@
 # Approval service
 
-Scaffolded in Milestone 0 (Foundation). Not yet implemented — implementation begins in Milestone 1.
+Implemented (Milestone 1): `confirm_extraction()` — the Document Assessment
+workflow's "confirm extraction" gate. Resumes a paused
+`workflows.document_assessment` graph via a real LangGraph
+`Command(resume=...)`, per
+[10-human-in-the-loop.md §10.5](../../docs/architecture/10-human-in-the-loop.md)'s
+three-action model (Approve / Reject / **Correct** — not just two). A
+Correct decision's field corrections are recorded as a distinct,
+attributed `ApprovalRecord` and reach the workflow's `extraction_record` for
+real (verified in `tests/unit/mara/test_approval_service.py`'s end-to-end
+integration test against a real compiled workflow graph, not just a mock).
 
-See [10-human-in-the-loop.md](../../docs/architecture/10-human-in-the-loop.md) for the full specification this module implements. Do not add code here without a corresponding entry in that document, per docs/repo-audit/05-development-guidelines.md §5.5.
+Does **not** import `workflows/` directly (dependency rule,
+[03-repository-structure.md §3.3](../../docs/architecture/03-repository-structure.md#33-dependency-rules))
+— takes any object with an `ainvoke()` method (a `ResumableWorkflow`
+protocol), so the caller supplies the actual compiled graph.
+
+Audit logging uses the same interim structured-logging stub as
+`shared/schemas/tooling.py` — `services/audit_service` doesn't exist yet.
+
+See [10-human-in-the-loop.md](../../docs/architecture/10-human-in-the-loop.md)
+for the full specification. Do not add code here without a corresponding
+entry in that document, per docs/repo-audit/05-development-guidelines.md §5.5.
