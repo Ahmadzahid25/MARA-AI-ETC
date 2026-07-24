@@ -83,10 +83,16 @@ AuditSink = Callable[[ToolInvocationLog], None]
 
 
 def _default_sink(entry: ToolInvocationLog) -> None:
-    # TODO(milestone-1): replace with a real services/audit_service write
-    # once that service exists. Structured logging is a deliberate, visible
-    # stand-in — not a silent no-op — so a missing real audit write is
-    # obvious in logs during this interim period, not swallowed quietly.
+    # services/audit_service now exists and is wired as the real Audit
+    # Memory writer for approval decisions (services/approval_service's
+    # async audit_writer) — but this sink is called synchronously from
+    # tools/ocr and tools/documents (deliberately sync, for their own
+    # ThreadPoolExecutor-based timeout enforcement), and services/
+    # audit_service's write path is asyncpg-only (async). Bridging that
+    # sync/async gap is a deliberate follow-up, not addressed here — see
+    # services/audit_service/README.md. Structured logging remains this
+    # sink's real, visible behavior for tool calls in the meantime, not a
+    # silent no-op.
     logger.info('tool_invocation', extra={'audit': entry.model_dump(mode='json')})
 
 

@@ -95,6 +95,33 @@ class TestStartAssessmentAndDecide:
         assert body['status'] == 'completed'
         assert body['stage_log'][-1] == 'completion'
 
+    def test_decision_reaches_an_injected_audit_writer(self) -> None:
+        written = []
+
+        async def fake_audit_writer(record) -> None:
+            written.append(record)
+
+        app = create_app(
+            workflow=_build_test_workflow(), audit_writer=fake_audit_writer
+        )
+        app.dependency_overrides[get_current_principal] = lambda: _FAKE_PRINCIPAL
+
+        with TestClient(app) as client:
+            start = client.post(
+                '/documents/assessments',
+                files={'file': ('doc.pdf', _blank_pdf_bytes(), 'application/pdf')},
+            )
+            thread_id = start.json()['thread_id']
+
+            client.post(
+                f'/documents/assessments/{thread_id}/decision',
+                json={'action': 'approve'},
+            )
+
+        assert len(written) == 1
+        assert written[0].actor == 'officer-1'
+        assert written[0].workflow_thread_id == thread_id
+
     def test_reject_completes_without_compliance_check(self) -> None:
         app = create_app(workflow=_build_test_workflow())
         app.dependency_overrides[get_current_principal] = lambda: _FAKE_PRINCIPAL

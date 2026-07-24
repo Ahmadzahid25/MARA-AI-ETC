@@ -15,7 +15,10 @@ from __future__ import annotations
 
 from fastapi import Request
 
-from services.approval_service.approval_service import ResumableWorkflow
+from services.approval_service.approval_service import (
+    AsyncAuditWriter,
+    ResumableWorkflow,
+)
 
 
 def get_workflow(request: Request) -> ResumableWorkflow:
@@ -24,3 +27,12 @@ def get_workflow(request: Request) -> ResumableWorkflow:
     production, ``create_app(workflow=...)`` for tests)."""
 
     return request.app.state.workflow
+
+
+def get_audit_writer(request: Request) -> AsyncAuditWriter | None:
+    """The real Audit Memory writer, if wired (see ``composition.py``'s
+    ``build_real_audit_writer``). ``None`` falls back to
+    ``services/approval_service``'s structured-logging stub — routers don't
+    need to know which case they're in."""
+
+    return getattr(request.app.state, 'audit_writer', None)

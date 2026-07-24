@@ -23,17 +23,31 @@ from fastapi import FastAPI
 from services.api_gateway.middleware import CorrelationIdMiddleware
 from services.api_gateway.routers import approvals, diagnostics, documents, health
 from services.api_gateway.telemetry import instrument_app
-from services.approval_service.approval_service import ResumableWorkflow
+from services.approval_service.approval_service import (
+    AsyncAuditWriter,
+    ResumableWorkflow,
+)
 from shared.config import get_settings
 
+_UNSET = object()
 
-def create_app(workflow: ResumableWorkflow | None = None) -> FastAPI:
+
+def create_app(
+    workflow: ResumableWorkflow | None = None,
+    audit_writer: AsyncAuditWriter | None | object = _UNSET,
+) -> FastAPI:
     """``workflow``: the compiled Document Assessment workflow graph.
     Tests pass one directly (e.g. compiled with ``InMemorySaver``). Left
     unset in production — the real one is built lazily at startup by
     ``composition.py`` (a documented, narrow exception to the services/
     dependency rule; see that module) against the real Postgres
     checkpointer, since it needs an open connection for the app's lifetime.
+
+    ``audit_writer``: the real Audit Memory writer. Distinguishes "not
+    passed" (``_UNSET`` — build the real one alongside ``workflow`` in
+    production) from "explicitly ``None``" (a test deliberately exercising
+    the structured-logging fallback) — plain ``None`` as the default
+    wouldn't let tests express that second case.
     """
 
     settings = get_settings()
@@ -42,13 +56,21 @@ def create_app(workflow: ResumableWorkflow | None = None) -> FastAPI:
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         if workflow is not None:
             app.state.workflow = workflow
+            app.state.audit_writer = None if audit_writer is _UNSET else audit_writer
             yield
             return
 
-        from services.api_gateway.composition import build_real_workflow
+        from services.api_gateway.composition import (
+            build_real_audit_writer,
+            build_real_workflow,
+        )
 
-        async with build_real_workflow(settings) as real_workflow:
+        async with (
+            build_real_workflow(settings) as real_workflow,
+            build_real_audit_writer(settings) as real_audit_writer,
+        ):
             app.state.workflow = real_workflow
+            app.state.audit_writer = real_audit_writer
             yield
 
     app = FastAPI(

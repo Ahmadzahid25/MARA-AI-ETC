@@ -67,6 +67,14 @@ runs on. Read in this order:
   `langgraph`'s in-memory checkpointer (`InMemorySaver`) — **never against
   the real `postgres-primary` checkpointer path.** Standing up the stack for
   real is also what first proves that actually works.
+- **New since the last update:** `services/api_gateway` now exposes two real
+  HTTP endpoints (`POST /documents/assessments`,
+  `POST /documents/assessments/{thread_id}/decision`) and
+  `services/audit_service` writes approval decisions to the `audit_memory`
+  table (already defined in `infrastructure/compose/init/postgres-primary-init.sql`
+  since Milestone 0). Both are tested only against mocks/`InMemorySaver` —
+  see item 7 below, this is now part of your immediate verification pass,
+  not a separate task.
 
 ## Immediate task: stand up and verify the Docker stack
 
@@ -101,6 +109,40 @@ Then verify, don't assume:
    this is the first real chance to prove Postgres-backed checkpoint
    resumption works outside a mock. Flag it clearly if you don't get to
    this rather than silently skipping it.
+7. **Verify real Audit Memory writes.** This is new, not in an earlier
+   version of this file. **You cannot do this through the full HTTP flow
+   yet** — `POST /documents/assessments` will always fail with a 503 before
+   the workflow ever reaches its paused state, because no OCR engine or
+   document classifier is wired (`tools/ocr/README.md`,
+   `tools/documents/README.md`), so there's no valid `thread_id` to submit a
+   decision against. Don't chase that as a bug; it's expected, current
+   platform state. Instead, verify the write path directly and in
+   isolation:
+   ```python
+   import asyncio
+   from services.audit_service import AuditEvent, audit_pool, write_audit_event
+   from shared.config import get_settings
+
+   async def main():
+       async with audit_pool(get_settings()) as pool:
+           await write_audit_event(pool, AuditEvent(
+               workflow_id='infra-verification-test',
+               actor_id='dev-3',
+               actor_role='officer',
+               event_type='approval',
+               payload={'note': 'manual verification'},
+           ))
+           rows = await pool.fetch(
+               "SELECT * FROM audit_memory WHERE workflow_id = 'infra-verification-test'"
+           )
+           print(rows)
+
+   asyncio.run(main())
+   ```
+   Confirm the row lands with the correct columns, and that `occurred_at`
+   was set by the database (not the client). This has **never been run
+   against a real database** — every test so far (`tests/unit/mara/test_audit_service.py`)
+   mocks the `asyncpg` pool entirely.
 
 **Report exactly what you verified vs. what you assumed.** A prior session
 on this project got burned repeatedly by "done" claims that turned out to

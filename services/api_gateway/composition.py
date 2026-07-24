@@ -32,7 +32,15 @@ from contextlib import asynccontextmanager
 
 from agents.compliance_agent import ComplianceAgent
 from agents.document_agent import DocumentAgent
-from services.approval_service.approval_service import ResumableWorkflow
+from services.approval_service.approval_service import (
+    AsyncAuditWriter,
+    ResumableWorkflow,
+)
+from services.audit_service import (
+    approval_record_to_audit_event,
+    audit_pool,
+    write_audit_event,
+)
 from shared.config import Settings
 from shared.workflow_engine import postgres_checkpointer
 from workflows.document_assessment import build_document_assessment_graph
@@ -55,3 +63,24 @@ async def build_real_workflow(settings: Settings) -> AsyncIterator[ResumableWork
 
     async with postgres_checkpointer(settings) as checkpointer:
         yield graph.compile(checkpointer=checkpointer)
+
+
+@asynccontextmanager
+async def build_real_audit_writer(
+    settings: Settings,
+) -> AsyncIterator[AsyncAuditWriter]:
+    """The real Audit Memory write path for approval decisions
+    (services/audit_service, against the ``audit_memory`` table already
+    defined in infrastructure/compose/init/postgres-primary-init.sql).
+    Same composition-root reasoning as ``build_real_workflow`` above —
+    ``services/approval_service`` stays free of any ``services/audit_service``
+    import by depending on the generic ``AsyncAuditWriter`` callable type
+    instead.
+    """
+
+    async with audit_pool(settings) as pool:
+
+        async def _write(record) -> None:
+            await write_audit_event(pool, approval_record_to_audit_event(record))
+
+        yield _write

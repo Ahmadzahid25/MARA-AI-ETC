@@ -132,6 +132,56 @@ class TestConfirmExtractionWithMockedWorkflow:
         assert captured[0].caller_agent == 'officer-2'
         assert captured[0].workflow_id == 'wf-2'
 
+    @pytest.mark.asyncio
+    async def test_audit_writer_takes_priority_over_audit_sink(self) -> None:
+        written = []
+        sink_captured = []
+        mock_workflow = AsyncMock()
+        mock_workflow.ainvoke = AsyncMock(return_value={})
+        decision = ApprovalDecisionInput(
+            action=ApprovalAction.APPROVE, actor='officer-3'
+        )
+
+        async def fake_audit_writer(record) -> None:
+            written.append(record)
+
+        await confirm_extraction(
+            mock_workflow,
+            'wf-3',
+            'doc-3',
+            decision,
+            audit_sink=sink_captured.append,
+            audit_writer=fake_audit_writer,
+        )
+
+        assert len(written) == 1
+        assert written[0].actor == 'officer-3'
+        assert written[0].workflow_thread_id == 'wf-3'
+        assert sink_captured == []  # sink fallback not used when writer given
+
+    @pytest.mark.asyncio
+    async def test_audit_writer_is_awaited_before_workflow_resumes(self) -> None:
+        call_order = []
+        mock_workflow = AsyncMock()
+
+        async def fake_ainvoke(*args, **kwargs):
+            call_order.append('resume')
+            return {}
+
+        mock_workflow.ainvoke = fake_ainvoke
+        decision = ApprovalDecisionInput(
+            action=ApprovalAction.APPROVE, actor='officer-4'
+        )
+
+        async def fake_audit_writer(record) -> None:
+            call_order.append('audit')
+
+        await confirm_extraction(
+            mock_workflow, 'wf-4', 'doc-4', decision, audit_writer=fake_audit_writer
+        )
+
+        assert call_order == ['audit', 'resume']
+
 
 class TestConfirmExtractionEndToEndWithRealWorkflow:
     """Real integration: approval_service.confirm_extraction() resuming an

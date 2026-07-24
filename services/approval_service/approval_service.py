@@ -19,6 +19,7 @@ workflow instance passes the compiled graph in.
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from typing import Any, Protocol
 
 from langgraph.types import Command
@@ -34,6 +35,16 @@ from shared.schemas.tooling import AuditSink, ToolInvocationLog, log_tool_invoca
 
 class ResumableWorkflow(Protocol):
     async def ainvoke(self, input: Any, config: dict) -> dict: ...  # noqa: A002
+
+
+# A real, async Audit Memory write (e.g. services.audit_service.write_audit_event
+# bound to a connection pool, via services.audit_service.adapters
+# .approval_record_to_audit_event) — kept as a generic injectable callable
+# here rather than an import of services.audit_service, mirroring
+# ResumableWorkflow's structural-typing pattern above: this module stays
+# usable/testable without a real database, and the composition root is the
+# one place that wires a concrete implementation in.
+AsyncAuditWriter = Callable[[ApprovalRecord], Awaitable[None]]
 
 
 def _resume_payload(decision: ApprovalDecisionInput) -> dict:
@@ -52,14 +63,9 @@ def _resume_payload(decision: ApprovalDecisionInput) -> dict:
 
 
 def _log_approval(record: ApprovalRecord, audit_sink: AuditSink | None) -> None:
-    # TODO(milestone-1): replace with a real services/audit_service write —
-    # see shared/schemas/tooling.py's log_tool_invocation for the same
-    # interim pattern applied to tool calls. The Approval Service is
-    # required (docs/architecture/08-memory-architecture.md §8.2) to write
-    # Audit Memory independently of the Tool Runtime and supervisor_service
-    # — reusing the same stub sink here, not a separate ad hoc log, keeps
-    # that "independently" property honest once the real write path exists:
-    # swapping the sink closes all three call sites identically.
+    # Fallback used only when no real audit_writer is supplied (see
+    # confirm_extraction) — e.g. services/audit_service isn't wired yet in
+    # this environment. Structured logging, not a silent no-op.
     log_tool_invocation(
         ToolInvocationLog(
             tool_name='approval_decision',
@@ -81,6 +87,7 @@ async def confirm_extraction(
     decision: ApprovalDecisionInput,
     *,
     audit_sink: AuditSink | None = None,
+    audit_writer: AsyncAuditWriter | None = None,
 ) -> dict:
     """Resume a Document Assessment workflow paused at its
     ``confirm_extraction`` gate with an officer's decision. The
@@ -88,6 +95,12 @@ async def confirm_extraction(
     decision is on record even if resumption itself subsequently fails —
     per docs/architecture/06-tool-architecture.md §6.1's same "audit before
     the caller sees the result" principle applied to tool calls.
+
+    ``audit_writer``, when supplied, is a real async Audit Memory write
+    (e.g. services.audit_service) and takes priority over ``audit_sink``'s
+    structured-logging fallback — see the ``AsyncAuditWriter`` type alias
+    above for why this module doesn't import services.audit_service
+    directly.
     """
 
     record = ApprovalRecord(
@@ -98,7 +111,10 @@ async def confirm_extraction(
         reason=decision.reason,
         corrections=decision.corrections,
     )
-    _log_approval(record, audit_sink)
+    if audit_writer is not None:
+        await audit_writer(record)
+    else:
+        _log_approval(record, audit_sink)
 
     config = {'configurable': {'thread_id': thread_id}}
     return await workflow.ainvoke(

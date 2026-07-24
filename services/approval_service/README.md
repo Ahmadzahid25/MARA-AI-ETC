@@ -16,8 +16,13 @@ Does **not** import `workflows/` directly (dependency rule,
 — takes any object with an `ainvoke()` method (a `ResumableWorkflow`
 protocol), so the caller supplies the actual compiled graph.
 
-Audit logging uses the same interim structured-logging stub as
-`shared/schemas/tooling.py` — `services/audit_service` doesn't exist yet.
+Audit logging: `confirm_extraction()` accepts an optional async
+`audit_writer` — when supplied (as `services/api_gateway/composition.py`
+now does, binding `services/audit_service.write_audit_event` to a real
+connection pool), it takes priority and every decision is genuinely written
+to the `audit_memory` table, not just logged. Falls back to the same
+interim structured-logging stub as `shared/schemas/tooling.py` when no
+writer is given (e.g. in tests that don't need a real database).
 
 See [10-human-in-the-loop.md](../../docs/architecture/10-human-in-the-loop.md)
 for the full specification. Do not add code here without a corresponding

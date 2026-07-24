@@ -12,10 +12,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field, ValidationError
 
 from services.api_gateway.auth import Principal, get_current_principal
-from services.api_gateway.dependencies import get_workflow
+from services.api_gateway.dependencies import get_audit_writer, get_workflow
 from services.api_gateway.errors import to_http_exception
 from services.api_gateway.serialization import serialize_workflow_result
 from services.approval_service.approval_service import (
+    AsyncAuditWriter,
     ResumableWorkflow,
     confirm_extraction,
 )
@@ -44,6 +45,7 @@ async def submit_decision(
     body: ApprovalDecisionRequest,
     principal: Principal = Depends(get_current_principal),
     workflow: ResumableWorkflow = Depends(get_workflow),
+    audit_writer: AsyncAuditWriter | None = Depends(get_audit_writer),
 ) -> dict:
     try:
         decision = ApprovalDecisionInput(
@@ -58,7 +60,9 @@ async def submit_decision(
         ) from exc
 
     try:
-        result = await confirm_extraction(workflow, thread_id, thread_id, decision)
+        result = await confirm_extraction(
+            workflow, thread_id, thread_id, decision, audit_writer=audit_writer
+        )
     except ToolError as exc:
         raise to_http_exception(exc) from exc
 

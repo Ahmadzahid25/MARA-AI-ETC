@@ -13,8 +13,12 @@ the common tool-error/audit-log types shared by every tool. Leaf module per
 | `tooling.py` | `ToolError` taxonomy (`ToolInputError`, `ToolTimeoutError`, `ToolExternalServiceError`, `ToolPermissionError`) and `ToolInvocationLog`/`log_tool_invocation()` — the audit-log shape every tool call writes, per [06-tool-architecture.md §6.1](../../docs/architecture/06-tool-architecture.md) |
 
 `log_tool_invocation()`'s default sink is structured logging, not a real
-Audit Memory write — `services/audit_service` doesn't exist yet. See the
-`TODO(milestone-1)` in `tooling.py`.
+Audit Memory write. `services/audit_service` now exists (pulled forward
+from Milestone 5) and is wired as the real writer for approval decisions —
+but not yet for tool-call logging here, due to a sync/async mismatch
+between this module's sync `AuditSink` and `audit_service`'s `asyncpg`-only
+write path. See the comment on `_default_sink` in `tooling.py` and
+`services/audit_service/README.md`.
 
 See [06-tool-architecture.md](../../docs/architecture/06-tool-architecture.md)
 and [03-repository-structure.md#33-dependency-rules](../../docs/architecture/03-repository-structure.md#33-dependency-rules)
