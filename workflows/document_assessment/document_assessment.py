@@ -25,10 +25,21 @@ A rejected extraction currently routes straight to Completion rather than a
 targeted re-run of Document Agent — real re-run routing per §7.4 is a later
 refinement; this template does not yet lose the rejection (it's recorded in
 ``approval_decision``), it just doesn't automatically retry.
+
+The confirm-extraction step also emits Long-term Memory calibration events
+(docs/architecture/08-memory-architecture.md §8.2, docs/architecture/
+10-human-in-the-loop.md §10.5) — one per extracted field, recording Document
+Agent's stated confidence against whether the officer corrected it. This is
+the governance-mandated calibration-tracking loop
+(docs/governance/architecture-approval-report.md §5), not an optional
+addition; it runs against the *original*, pre-correction field values, since
+the signal is "was the agent's stated confidence right," not "what's the
+final value."
 """
 
 from __future__ import annotations
 
+from collections.abc import Awaitable, Callable
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -36,8 +47,15 @@ from langgraph.types import interrupt
 
 from agents.compliance_agent.compliance_agent import ComplianceAgent
 from agents.document_agent.document_agent import DocumentAgent
+from services.memory_service import (
+    CalibrationEvent,
+    extraction_record_to_calibration_events,
+)
+from shared.llm.model_tiers import AgentName
 from shared.schemas.compliance import ComplianceChecklist
 from shared.schemas.documents import DocumentExtractionRecord
+
+CalibrationWriter = Callable[[list[CalibrationEvent]], Awaitable[None]]
 
 
 class ApprovalDecision(TypedDict, total=False):
@@ -61,6 +79,7 @@ class DocumentAssessmentState(TypedDict):
 def build_document_assessment_graph(
     document_agent: DocumentAgent,
     compliance_agent: ComplianceAgent,
+    calibration_writer: CalibrationWriter | None = None,
 ) -> StateGraph:
     async def _document_extraction_node(state: DocumentAssessmentState) -> dict:
         record = await document_agent.process_document(
@@ -87,7 +106,7 @@ def build_document_assessment_graph(
             'stage_log': [*state['stage_log'], 'validation'],
         }
 
-    def _confirm_extraction_node(state: DocumentAssessmentState) -> dict:
+    async def _confirm_extraction_node(state: DocumentAssessmentState) -> dict:
         record = state['extraction_record']
         assert record is not None
         low_confidence = record.low_confidence_fields(
@@ -101,6 +120,18 @@ def build_document_assessment_graph(
                 'low_confidence_field_names': [f.name for f in low_confidence],
             }
         )
+
+        if calibration_writer is not None:
+            corrected_field_names = {
+                c['field_name'] for c in (decision.get('corrected_fields') or [])
+            }
+            events = extraction_record_to_calibration_events(
+                record,
+                agent_name=AgentName.DOCUMENT.value,
+                workflow_id=state['document_id'],
+                corrected_field_names=corrected_field_names,
+            )
+            await calibration_writer(events)
 
         updates: dict = {
             'approval_decision': decision,

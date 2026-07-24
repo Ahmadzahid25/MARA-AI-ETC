@@ -41,13 +41,19 @@ from services.audit_service import (
     audit_pool,
     write_audit_event,
 )
+from services.memory_service import calibration_pool, write_calibration_event
 from shared.config import Settings
 from shared.workflow_engine import postgres_checkpointer
-from workflows.document_assessment import build_document_assessment_graph
+from workflows.document_assessment import (
+    CalibrationWriter,
+    build_document_assessment_graph,
+)
 
 
 @asynccontextmanager
-async def build_real_workflow(settings: Settings) -> AsyncIterator[ResumableWorkflow]:
+async def build_real_workflow(
+    settings: Settings, calibration_writer: CalibrationWriter | None = None
+) -> AsyncIterator[ResumableWorkflow]:
     """Construct the real Document Assessment workflow, checkpointed
     against the primary Postgres instance. No real OCR engine or document
     classifier is wired underneath ``DocumentAgent``/tools yet (see
@@ -59,7 +65,9 @@ async def build_real_workflow(settings: Settings) -> AsyncIterator[ResumableWork
 
     document_agent = DocumentAgent()
     compliance_agent = ComplianceAgent()
-    graph = build_document_assessment_graph(document_agent, compliance_agent)
+    graph = build_document_assessment_graph(
+        document_agent, compliance_agent, calibration_writer=calibration_writer
+    )
 
     async with postgres_checkpointer(settings) as checkpointer:
         yield graph.compile(checkpointer=checkpointer)
@@ -82,5 +90,24 @@ async def build_real_audit_writer(
 
         async def _write(record) -> None:
             await write_audit_event(pool, approval_record_to_audit_event(record))
+
+        yield _write
+
+
+@asynccontextmanager
+async def build_real_calibration_writer(
+    settings: Settings,
+) -> AsyncIterator[CalibrationWriter]:
+    """The real Long-term Memory calibration write path
+    (services/memory_service, against ``long_term_memory_calibration`` —
+    **not yet created**; see infrastructure/AGENTS.md item 8). Same
+    composition-root reasoning as the two functions above.
+    """
+
+    async with calibration_pool(settings) as pool:
+
+        async def _write(events) -> None:
+            for event in events:
+                await write_calibration_event(pool, event)
 
         yield _write

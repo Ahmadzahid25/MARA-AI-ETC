@@ -59,13 +59,15 @@ def _initial_state(requirements: list[str] | None = None) -> DocumentAssessmentS
     }
 
 
-def _compiled_graph():
+def _compiled_graph(calibration_writer=None):
     document_agent = DocumentAgent(
         field_extractor=_fake_field_extractor,
         classifier=lambda _b: ('bank_statement', 0.9),
     )
     compliance_agent = ComplianceAgent()
-    graph = build_document_assessment_graph(document_agent, compliance_agent)
+    graph = build_document_assessment_graph(
+        document_agent, compliance_agent, calibration_writer=calibration_writer
+    )
     return graph.compile(checkpointer=InMemorySaver())
 
 
@@ -199,3 +201,73 @@ class TestValidationNotes:
         result = await compiled.ainvoke(_initial_state(), config=config)
 
         assert result['validation_notes'] == ['1 field(s) below confidence threshold']
+
+
+class TestCalibrationWriter:
+    @pytest.mark.asyncio
+    async def test_approval_emits_calibration_event_marked_not_corrected(self) -> None:
+        written = []
+
+        async def fake_calibration_writer(events) -> None:
+            written.extend(events)
+
+        compiled = _compiled_graph(calibration_writer=fake_calibration_writer)
+        config = {'configurable': {'thread_id': 'wf-8'}}
+        await compiled.ainvoke(_initial_state(), config=config)
+
+        await compiled.ainvoke(
+            Command(resume={'status': 'approved', 'actor': 'officer-1'}), config=config
+        )
+
+        assert len(written) == 1
+        event = written[0]
+        assert event.field_name == 'applicant_name'
+        assert event.stated_confidence == 0.6
+        assert event.was_corrected is False
+        assert event.agent_name == 'document_agent'
+        assert event.document_type == 'bank_statement'
+
+    @pytest.mark.asyncio
+    async def test_correction_emits_calibration_event_marked_corrected(self) -> None:
+        written = []
+
+        async def fake_calibration_writer(events) -> None:
+            written.extend(events)
+
+        compiled = _compiled_graph(calibration_writer=fake_calibration_writer)
+        config = {'configurable': {'thread_id': 'wf-9'}}
+        await compiled.ainvoke(_initial_state(), config=config)
+
+        await compiled.ainvoke(
+            Command(
+                resume={
+                    'status': 'approved',
+                    'actor': 'officer-1',
+                    'corrected_fields': [
+                        {
+                            'field_name': 'applicant_name',
+                            'corrected_value': 'Ali bin Ahmad Jr',
+                        }
+                    ],
+                }
+            ),
+            config=config,
+        )
+
+        assert len(written) == 1
+        # The calibration signal is the *original* stated confidence against
+        # whether it needed correction — not the post-correction confidence.
+        assert written[0].stated_confidence == 0.6
+        assert written[0].was_corrected is True
+
+    @pytest.mark.asyncio
+    async def test_no_calibration_writer_does_not_break_the_workflow(self) -> None:
+        compiled = _compiled_graph(calibration_writer=None)
+        config = {'configurable': {'thread_id': 'wf-10'}}
+        await compiled.ainvoke(_initial_state(), config=config)
+
+        result = await compiled.ainvoke(
+            Command(resume={'status': 'approved', 'actor': 'officer-1'}), config=config
+        )
+
+        assert result['stage_log'][-1] == 'completion'

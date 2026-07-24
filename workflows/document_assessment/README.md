@@ -15,6 +15,13 @@ A rejected extraction currently routes to `completion` without an automatic
 targeted re-run — see the module docstring for why that's a deliberate,
 named simplification rather than a silently dropped requirement.
 
+`confirm_extraction` also emits Long-term Memory calibration events (an
+optional injected `calibration_writer`, per `services/memory_service`) —
+one per extracted field, stated confidence against whether it was
+corrected. Governance-mandated from Milestone 1
+([architecture-approval-report.md §5](../../docs/governance/architecture-approval-report.md)),
+not an optional addition.
+
 See [07-workflow-architecture.md](../../docs/architecture/07-workflow-architecture.md)
 for the full specification. Do not add code here without a corresponding
 entry in that document, per docs/repo-audit/05-development-guidelines.md §5.5.

@@ -62,16 +62,24 @@ def create_app(
 
         from services.api_gateway.composition import (
             build_real_audit_writer,
+            build_real_calibration_writer,
             build_real_workflow,
         )
 
+        # calibration_writer is baked into the compiled graph at
+        # construction time (workflows/document_assessment closes over it),
+        # not looked up per-request like audit_writer — so it must be
+        # entered before build_real_workflow, not alongside it.
         async with (
-            build_real_workflow(settings) as real_workflow,
+            build_real_calibration_writer(settings) as real_calibration_writer,
             build_real_audit_writer(settings) as real_audit_writer,
         ):
-            app.state.workflow = real_workflow
-            app.state.audit_writer = real_audit_writer
-            yield
+            async with build_real_workflow(
+                settings, calibration_writer=real_calibration_writer
+            ) as real_workflow:
+                app.state.workflow = real_workflow
+                app.state.audit_writer = real_audit_writer
+                yield
 
     app = FastAPI(
         title='MARA AI-ETC API Gateway',

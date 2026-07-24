@@ -144,6 +144,44 @@ Then verify, don't assume:
    against a real database** — every test so far (`tests/unit/mara/test_audit_service.py`)
    mocks the `asyncpg` pool entirely.
 
+8. **New table needed: `long_term_memory_calibration`.** Not yet in
+   `infrastructure/compose/init/postgres-primary-init.sql` — this is a
+   request from the backend/AI-agent side, not something you need to design,
+   just apply. `services/memory_service/calibration.py` (new) writes to it;
+   ACCB governance requires this loop "actually built and actively
+   monitored from Milestone 1 onward, not treated as a nice-to-have"
+   ([architecture-approval-report.md](../docs/governance/architecture-approval-report.md)
+   §5). Add this DDL to `postgres-primary-init.sql`, matching the existing
+   `audit_memory` table's style (append-only, indexed, no update/delete
+   path):
+   ```sql
+   -- Long-term Memory: confidence-calibration tracking (docs/architecture/
+   -- 08-memory-architecture.md §8.2). One row per extracted field per
+   -- workflow, recording the agent's stated confidence and whether an
+   -- officer subsequently corrected it — the raw signal a periodic batch
+   -- job aggregates into calibration reports. Append-only, like
+   -- audit_memory, so calibration drift is analyzable over time rather
+   -- than overwritten.
+   CREATE TABLE IF NOT EXISTS long_term_memory_calibration (
+       id                 BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+       recorded_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+       agent_name         TEXT NOT NULL,
+       workflow_id        UUID,
+       field_name         TEXT NOT NULL,
+       document_type      TEXT,
+       stated_confidence  DOUBLE PRECISION NOT NULL,
+       was_corrected      BOOLEAN NOT NULL
+   );
+
+   CREATE INDEX IF NOT EXISTS idx_calibration_agent_field
+       ON long_term_memory_calibration (agent_name, field_name);
+   CREATE INDEX IF NOT EXISTS idx_calibration_workflow_id
+       ON long_term_memory_calibration (workflow_id);
+   ```
+   Once applied, verify the same way as item 7 — a direct isolated script
+   using `services.memory_service.calibration.write_calibration_event`, not
+   the full HTTP flow (same OCR-engine blocker applies).
+
 **Report exactly what you verified vs. what you assumed.** A prior session
 on this project got burned repeatedly by "done" claims that turned out to
 be unrun or unverified — every status you report here should be something
