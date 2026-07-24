@@ -21,7 +21,7 @@ class TestCreateApp:
     def test_app_title_and_version(self) -> None:
         """The app should have the correct title and version metadata."""
         assert self.app.title == 'MARA AI-ETC API Gateway'
-        assert self.app.version == '0.1.0-milestone0'
+        assert self.app.version == '0.1.0-milestone1'
 
     def test_health_endpoint_returns_ok(self) -> None:
         """GET /healthz should return 200 with status ok."""

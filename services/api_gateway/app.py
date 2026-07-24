@@ -15,22 +15,48 @@ where that logic lives.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from services.api_gateway.middleware import CorrelationIdMiddleware
-from services.api_gateway.routers import diagnostics, health
+from services.api_gateway.routers import approvals, diagnostics, documents, health
 from services.api_gateway.telemetry import instrument_app
+from services.approval_service.approval_service import ResumableWorkflow
 from shared.config import get_settings
 
 
-def create_app() -> FastAPI:
+def create_app(workflow: ResumableWorkflow | None = None) -> FastAPI:
+    """``workflow``: the compiled Document Assessment workflow graph.
+    Tests pass one directly (e.g. compiled with ``InMemorySaver``). Left
+    unset in production — the real one is built lazily at startup by
+    ``composition.py`` (a documented, narrow exception to the services/
+    dependency rule; see that module) against the real Postgres
+    checkpointer, since it needs an open connection for the app's lifetime.
+    """
+
     settings = get_settings()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        if workflow is not None:
+            app.state.workflow = workflow
+            yield
+            return
+
+        from services.api_gateway.composition import build_real_workflow
+
+        async with build_real_workflow(settings) as real_workflow:
+            app.state.workflow = real_workflow
+            yield
 
     app = FastAPI(
         title='MARA AI-ETC API Gateway',
         description='Single entry point for all officer-workspace traffic. '
         'See docs/architecture/02-system-architecture.md §2.2.',
-        version='0.1.0-milestone0',
+        version='0.1.0-milestone1',
+        lifespan=lifespan,
     )
 
     app.add_middleware(CorrelationIdMiddleware)
@@ -38,5 +64,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(diagnostics.router)
+    app.include_router(documents.router)
+    app.include_router(approvals.router)
 
     return app
