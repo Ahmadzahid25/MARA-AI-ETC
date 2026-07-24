@@ -30,6 +30,29 @@ CREATE INDEX IF NOT EXISTS idx_audit_memory_event_type ON audit_memory (event_ty
 -- subsequent monthly partitions ahead of time in staging/production.
 CREATE TABLE IF NOT EXISTS audit_memory_default PARTITION OF audit_memory DEFAULT;
 
+-- Long-term Memory: confidence-calibration tracking (docs/architecture/
+-- 08-memory-architecture.md §8.2). One row per extracted field per
+-- workflow, recording the agent's stated confidence and whether an
+-- officer subsequently corrected it — the raw signal a periodic batch
+-- job aggregates into calibration reports. Append-only, like
+-- audit_memory, so calibration drift is analyzable over time rather
+-- than overwritten.
+CREATE TABLE IF NOT EXISTS long_term_memory_calibration (
+    id                 BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    recorded_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
+    agent_name         TEXT NOT NULL,
+    workflow_id        UUID,
+    field_name         TEXT NOT NULL,
+    document_type      TEXT,
+    stated_confidence  DOUBLE PRECISION NOT NULL,
+    was_corrected      BOOLEAN NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_calibration_agent_field
+    ON long_term_memory_calibration (agent_name, field_name);
+CREATE INDEX IF NOT EXISTS idx_calibration_workflow_id
+    ON long_term_memory_calibration (workflow_id);
+
 -- LangGraph's PostgresSaver (shared/workflow_engine/checkpointer.py) creates
 -- its own checkpoint tables on first use via `PostgresSaver.setup()` — not
 -- created here, since their schema is owned by the langgraph-checkpoint-postgres

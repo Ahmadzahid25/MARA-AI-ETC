@@ -1,5 +1,27 @@
 # Document Assessment workflow template
 
-Scaffolded in Milestone 0 (Foundation). Not yet implemented — implementation begins in Milestone 1.
+Implemented (Milestone 1): `build_document_assessment_graph()` — a real
+LangGraph `StateGraph`: `document_extraction` (Document Agent) →
+`validation` (confidence check) → `confirm_extraction` (a real durable pause
+via `langgraph.types.interrupt()`, resumed with `Command(resume=...)`) →
+`compliance_check` (Compliance Agent, only on approval) → `completion`. Per
+[07-workflow-architecture.md §7.3](../../docs/architecture/07-workflow-architecture.md#73-workflow-catalogue)'s
+catalogue entry.
 
-See [07-workflow-architecture.md#73-workflow-catalogue](../../docs/architecture/07-workflow-architecture.md#73-workflow-catalogue) for the full specification this module implements. Do not add code here without a corresponding entry in that document, per docs/repo-audit/05-development-guidelines.md §5.5.
+Start/Planning/Delegation (the Planner/`supervisor_service` stages of the
+common 8-stage model, §7.1) are collapsed — those components don't exist
+yet. This template is invoked directly with its parameters already decided.
+A rejected extraction currently routes to `completion` without an automatic
+targeted re-run — see the module docstring for why that's a deliberate,
+named simplification rather than a silently dropped requirement.
+
+`confirm_extraction` also emits Long-term Memory calibration events (an
+optional injected `calibration_writer`, per `services/memory_service`) —
+one per extracted field, stated confidence against whether it was
+corrected. Governance-mandated from Milestone 1
+([architecture-approval-report.md §5](../../docs/governance/architecture-approval-report.md)),
+not an optional addition.
+
+See [07-workflow-architecture.md](../../docs/architecture/07-workflow-architecture.md)
+for the full specification. Do not add code here without a corresponding
+entry in that document, per docs/repo-audit/05-development-guidelines.md §5.5.

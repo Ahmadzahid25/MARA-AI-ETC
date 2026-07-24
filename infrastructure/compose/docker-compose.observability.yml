@@ -17,7 +17,10 @@
 
 services:
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:latest
+    # Pinned to 0.114.x — later versions removed the built-in `loki` exporter
+    # or changed the binary path. Bump with care: verify `loki` exporter and
+    # binary path first.
+    image: otel/opentelemetry-collector-contrib:0.114.0
     container_name: mara-otel-collector
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yaml"]
@@ -66,7 +69,9 @@ services:
       - loki
 
   langfuse:
-    image: langfuse/langfuse:latest
+    # V3 requires ClickHouse; pin to v2.x for local dev without extra infra.
+    # Upgrade path: add a `clickhouse` service and set CLICKHOUSE_URL.
+    image: langfuse/langfuse:2
     container_name: mara-langfuse
     restart: unless-stopped
     environment:

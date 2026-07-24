@@ -15,22 +15,78 @@ where that logic lives.
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 
 from services.api_gateway.middleware import CorrelationIdMiddleware
-from services.api_gateway.routers import diagnostics, health
+from services.api_gateway.routers import approvals, diagnostics, documents, health
 from services.api_gateway.telemetry import instrument_app
+from services.approval_service.approval_service import (
+    AsyncAuditWriter,
+    ResumableWorkflow,
+)
 from shared.config import get_settings
 
+_UNSET = object()
 
-def create_app() -> FastAPI:
+
+def create_app(
+    workflow: ResumableWorkflow | None = None,
+    audit_writer: AsyncAuditWriter | None | object = _UNSET,
+) -> FastAPI:
+    """``workflow``: the compiled Document Assessment workflow graph.
+    Tests pass one directly (e.g. compiled with ``InMemorySaver``). Left
+    unset in production — the real one is built lazily at startup by
+    ``composition.py`` (a documented, narrow exception to the services/
+    dependency rule; see that module) against the real Postgres
+    checkpointer, since it needs an open connection for the app's lifetime.
+
+    ``audit_writer``: the real Audit Memory writer. Distinguishes "not
+    passed" (``_UNSET`` — build the real one alongside ``workflow`` in
+    production) from "explicitly ``None``" (a test deliberately exercising
+    the structured-logging fallback) — plain ``None`` as the default
+    wouldn't let tests express that second case.
+    """
+
     settings = get_settings()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        if workflow is not None:
+            app.state.workflow = workflow
+            app.state.audit_writer = None if audit_writer is _UNSET else audit_writer
+            yield
+            return
+
+        from services.api_gateway.composition import (
+            build_real_audit_writer,
+            build_real_calibration_writer,
+            build_real_workflow,
+        )
+
+        # calibration_writer is baked into the compiled graph at
+        # construction time (workflows/document_assessment closes over it),
+        # not looked up per-request like audit_writer — so it must be
+        # entered before build_real_workflow, not alongside it.
+        async with (
+            build_real_calibration_writer(settings) as real_calibration_writer,
+            build_real_audit_writer(settings) as real_audit_writer,
+        ):
+            async with build_real_workflow(
+                settings, calibration_writer=real_calibration_writer
+            ) as real_workflow:
+                app.state.workflow = real_workflow
+                app.state.audit_writer = real_audit_writer
+                yield
 
     app = FastAPI(
         title='MARA AI-ETC API Gateway',
         description='Single entry point for all officer-workspace traffic. '
         'See docs/architecture/02-system-architecture.md §2.2.',
-        version='0.1.0-milestone0',
+        version='0.1.0-milestone1',
+        lifespan=lifespan,
     )
 
     app.add_middleware(CorrelationIdMiddleware)
@@ -38,5 +94,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(diagnostics.router)
+    app.include_router(documents.router)
+    app.include_router(approvals.router)
 
     return app
