@@ -1,0 +1,203 @@
+# MARA AI-ETC — Dify knowledge service stack.
+#
+# Additive alongside docker-compose.mara.yml and the root docker-compose.yml.
+# Never edits either (docs/repo-audit/06-openhands-protection-rules.md §6.1).
+# Compose with all three layers:
+#
+#   docker compose \
+#     -f docker-compose.yml \
+#     -f infrastructure/compose/docker-compose.mara.yml \
+#     -f infrastructure/compose/docker-compose.observability.yml \
+#     -f infrastructure/compose/docker-compose.dify.yml \
+#     up -d
+#
+# CRITICAL INVARIANTS — read before modifying:
+#
+#   1. Dify runs against postgres-dify, NEVER postgres-primary.
+#      This is ACCB Condition C-5 / Review Board Finding C2.
+#      postgres-dify is defined in docker-compose.mara.yml; this file
+#      depends on it via `depends_on` and the shared `mara-network`.
+#
+#   2. Dify has NO outbound internet egress.
+#      docs/architecture/11-security-architecture.md §11.7: the Market Agent's
+#      search tool is the ONLY component permitted outbound internet access,
+#      enforced by network policy. A second egress path acquired incidentally
+#      while wiring a new service is exactly what §11.7 exists to prevent.
+#      Internal-network-only + `internal: true` on mara-network ensures this
+#      for dev; production enforces it at the NetworkPolicy level.
+#
+#   3. Dify is reachable internally at http://dify-api:5001 (service-to-service).
+#      The host-exposed port 5001 is for local admin/dev UI only.
+#      Backend services reference DIFY_API_URL=http://dify-api:5001/v1 from
+#      shared config — see infrastructure/AGENTS.md for how to wire this.
+#
+#   4. Two backup schedules, two restore procedures (docs/architecture/
+#      13-deployment-architecture.md): postgres-dify is separate from
+#      postgres-primary in the DR story, not an afterthought.
+#
+# Secrets here are dev-only placeholders — never commit real secrets.
+# Pattern: REPLACE_ME_DEV_ONLY (per infrastructure/AGENTS.md conventions).
+
+services:
+
+  # ── Dify API server ───────────────────────────────────────────────────────
+  # The knowledge management + RAG engine. Agents never call it directly —
+  # they go through services/knowledge_service (the boundary defined in
+  # services/knowledge_service/contract.py and services/knowledge_service/__init__.py).
+  dify-api:
+    image: langgenius/dify-api:1.0.0
+    container_name: mara-dify-api
+    restart: unless-stopped
+    environment:
+      # ── Mode ──────────────────────────────────────────────────────────────
+      MODE: api
+      # ── Database — postgres-dify ONLY (ACCB C-5) ──────────────────────────
+      DB_USERNAME: dify
+      DB_PASSWORD: dify
+      DB_HOST: postgres-dify
+      DB_PORT: 5432
+      DB_DATABASE: dify
+      # ── Redis (shared mara-redis instance — Dify uses a separate key prefix)
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 1       # DB 0 is reserved for platform use; Dify gets DB 1
+      REDIS_USE_SSL: "false"
+      # ── Object storage (MinIO / S3-compatible) ────────────────────────────
+      STORAGE_TYPE: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET_NAME: dify-knowledge
+      S3_ACCESS_KEY: mara-dev
+      S3_SECRET_KEY: mara-dev-secret
+      S3_REGION: us-east-1
+      # ── Vector store — Dify manages its own embedding index in pgvector ───
+      # The platform's own pgvector index (audit/precedent/etc.) is in
+      # postgres-primary and is clearly distinct (§9.1.1).
+      VECTOR_STORE: pgvector
+      PGVECTOR_HOST: postgres-dify
+      PGVECTOR_PORT: 5432
+      PGVECTOR_USER: dify
+      PGVECTOR_PASSWORD: dify
+      PGVECTOR_DATABASE: dify
+      # ── App secrets (dev placeholders — replace before staging) ───────────
+      SECRET_KEY: REPLACE_ME_DEV_ONLY_dify_secret_key_32chars_min
+      INIT_PASSWORD: REPLACE_ME_DEV_ONLY
+      # ── Internal service config ───────────────────────────────────────────
+      CONSOLE_WEB_URL: ""
+      SERVICE_API_URL: http://dify-api:5001
+      APP_WEB_URL: http://dify-web:3000
+      FILES_URL: http://dify-api:5001
+      # ── Celery (background tasks for ingestion pipelines) ─────────────────
+      CELERY_BROKER_URL: redis://redis:6379/1
+      # ── Egress: intentionally unconfigured — Dify is internal-only ────────
+      # Do NOT add HTTP_PROXY, HTTPS_PROXY, or any LLM provider API keys here.
+      # docs/architecture/11-security-architecture.md §11.7: Dify in this
+      # deployment does NOT make outbound calls. LLM inference for RAG
+      # embeddings routes through the platform's own model gateway (future
+      # milestone), not through Dify's own provider integrations.
+      LLM_PROVIDER: ""    # explicitly empty; prevents Dify from calling any cloud provider
+    ports:
+      - "5001:5001"       # host-exposed for local admin/dev; internal = http://dify-api:5001
+    volumes:
+      - mara_dify_storage:/app/api/storage
+    depends_on:
+      postgres-dify:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      minio-dify-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5001/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+
+  # ── Dify worker (Celery — document ingestion / embedding jobs) ────────────
+  dify-worker:
+    image: langgenius/dify-api:1.0.0
+    container_name: mara-dify-worker
+    restart: unless-stopped
+    environment:
+      MODE: worker
+      # Same environment block as dify-api — must stay in sync.
+      DB_USERNAME: dify
+      DB_PASSWORD: dify
+      DB_HOST: postgres-dify
+      DB_PORT: 5432
+      DB_DATABASE: dify
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 1
+      REDIS_USE_SSL: "false"
+      STORAGE_TYPE: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET_NAME: dify-knowledge
+      S3_ACCESS_KEY: mara-dev
+      S3_SECRET_KEY: mara-dev-secret
+      S3_REGION: us-east-1
+      VECTOR_STORE: pgvector
+      PGVECTOR_HOST: postgres-dify
+      PGVECTOR_PORT: 5432
+      PGVECTOR_USER: dify
+      PGVECTOR_PASSWORD: dify
+      PGVECTOR_DATABASE: dify
+      SECRET_KEY: REPLACE_ME_DEV_ONLY_dify_secret_key_32chars_min
+      CELERY_BROKER_URL: redis://redis:6379/1
+      LLM_PROVIDER: ""
+    volumes:
+      - mara_dify_storage:/app/api/storage
+    depends_on:
+      dify-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import celery; print(\"ok\")' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── Dify web (admin UI — local dev only, not exposed in prod) ─────────────
+  dify-web:
+    image: langgenius/dify-web:1.0.0
+    container_name: mara-dify-web
+    restart: unless-stopped
+    environment:
+      CONSOLE_API_URL: http://localhost:5001
+      APP_API_URL: http://localhost:5001
+    ports:
+      - "3001:3000"     # host port 3001 to avoid clash with Grafana on 3000
+    depends_on:
+      dify-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ > /dev/null || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # ── MinIO bucket init for Dify ────────────────────────────────────────────
+  # Creates the dify-knowledge bucket before dify-api starts.
+  # Separate from mara-minio-init (which creates mara-documents) to keep
+  # each service's init concern isolated and independently idempotent.
+  minio-dify-init:
+    image: minio/mc:latest
+    container_name: mara-minio-dify-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set mara-local http://minio:9000 mara-dev mara-dev-secret &&
+      mc mb -p mara-local/dify-knowledge &&
+      echo 'dify-knowledge bucket ready'
+      "
+    restart: "no"
+
+volumes:
+  mara_dify_storage:
+    # Dify's local file cache (before offload to MinIO). Separate from any
+    # platform volume — consistent with the two-database, two-DR-story principle.
