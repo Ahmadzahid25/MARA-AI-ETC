@@ -29,6 +29,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from shared.agent_profiles import callers_allowed_for_tool
 from shared.schemas import (
     AuditSink,
     DocumentClassification,
@@ -40,9 +41,11 @@ from shared.schemas import (
     log_tool_invocation,
 )
 
+TOOL_NAME = 'document_classification'
 TIMEOUT_SECONDS = 10.0
 MAX_ATTEMPTS = 3  # first attempt + 2 retries, per §6.2's "Retries: 2"
-ALLOWED_CALLERS = frozenset({'document_agent'})
+# Derived from the profile registry — see tools/ocr/ocr_tool.py for why.
+ALLOWED_CALLERS = callers_allowed_for_tool(TOOL_NAME)
 
 # Returns (document_type, confidence) for one document. Swappable so a real
 # classifier model can be injected without changing classify_document()'s

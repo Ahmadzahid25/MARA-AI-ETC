@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 from collections.abc import Awaitable, Callable
 
+from shared.agent_profiles import confidence_threshold_for, profile_for
 from shared.llm.client import TieredLLMClient
 from shared.llm.model_tiers import AgentName
 from shared.schemas import AuditSink
@@ -37,7 +38,11 @@ from shared.schemas.documents import (
 from tools.documents.classification import Classifier, classify_document
 from tools.documents.pdf_parse import ParsedPage, parse_pdf
 
-CONFIDENCE_THRESHOLD = 0.85
+PROFILE = profile_for(AgentName.DOCUMENT.value)
+# Kept as a module constant for the existing importers, but sourced from the
+# profile registry so the threshold is adjusted in one place — see
+# shared/agent_profiles/profiles.py.
+CONFIDENCE_THRESHOLD = confidence_threshold_for(AgentName.DOCUMENT.value)
 
 
 class ExtractionParsingError(Exception):
@@ -143,8 +148,9 @@ class DocumentAgent:
     extraction — role/goal/tools/confidence-threshold, per docs/architecture/
     05-agent-architecture.md §5.1's common agent contract."""
 
+    profile = PROFILE
     confidence_threshold: float = CONFIDENCE_THRESHOLD
-    allowed_tools = ('ocr', 'pdf_parse', 'document_classification')
+    allowed_tools = PROFILE.allowed_tools
 
     def __init__(
         self,

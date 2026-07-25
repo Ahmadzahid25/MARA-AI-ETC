@@ -33,6 +33,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from shared.agent_profiles import callers_allowed_for_tool
 from shared.schemas import (
     AuditSink,
     ExtractionSource,
@@ -45,9 +46,11 @@ from shared.schemas import (
 )
 from tools.ocr.ocr_tool import OCREngine, run_ocr
 
+TOOL_NAME = 'pdf_parse'
 TIMEOUT_SECONDS = 15.0
 MAX_ATTEMPTS = 3  # first attempt + 2 retries, per §6.2's "Retries: 2"
-ALLOWED_CALLERS = frozenset({'document_agent'})
+# Derived from the profile registry — see tools/ocr/ocr_tool.py for why.
+ALLOWED_CALLERS = callers_allowed_for_tool(TOOL_NAME)
 
 
 class ParsedTable(BaseModel):

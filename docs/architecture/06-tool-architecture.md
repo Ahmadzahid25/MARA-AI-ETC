@@ -10,7 +10,7 @@ Every tool is registered with the Tool Runtime ([02-system-architecture.md](02-s
 
 - **Input schema** — typed, validated (Pydantic) before execution; malformed input is rejected before it reaches the tool implementation.
 - **Output schema** — typed, including a mandatory `confidence` field where applicable and a `source` provenance field.
-- **Permissions** — which agent roles may invoke it (see the allow-lists in [05-agent-architecture.md](05-agent-architecture.md)); enforced at the Tool Runtime, not just at the agent's prompt level, so a prompt-injected agent still cannot call a tool it isn't granted.
+- **Permissions** — which agent roles may invoke it (see the allow-lists in [05-agent-architecture.md](05-agent-architecture.md)); enforced at the Tool Runtime, not just at the agent's prompt level, so a prompt-injected agent still cannot call a tool it isn't granted. The Permissions column of §6.2 below is **declared in `shared/agent_profiles/` and derived by the tool**, never restated in the tool module — see §6.7.
 - **Error handling** — a typed error taxonomy (`InputError`, `TimeoutError`, `ExternalServiceError`, `PermissionError`) rather than raw exceptions leaking to the agent; agents reason over typed errors, not stack traces.
 - **Timeout** — a per-tool default, overridable per workflow, enforced by the Tool Runtime regardless of whether the tool implementation respects it internally.
 - **Retries** — idempotent tools get automatic retry with backoff on `TimeoutError`/`ExternalServiceError`; non-idempotent tools (e.g., email send) are never auto-retried without explicit dedup/idempotency-key handling.
@@ -59,3 +59,20 @@ The Market Agent is the platform's sole external-egress path ([05-agent-architec
 - **Network-policy-level egress enforcement**: independent of the application-level permission check, a Kubernetes network policy ([13-deployment-architecture.md](13-deployment-architecture.md)) restricts non-cluster-internal network access to the Market Agent's tool pod specifically — so a future tool addition cannot quietly acquire a second egress path merely by being granted the permission in code. This mirrors the platform's general defense-in-depth pattern (permission enforced at more than one layer, [02-system-architecture.md](02-system-architecture.md) §2.4).
 
 Both controls are a precondition for the Market Agent shipping at all in an environment with real applicant data — they gate Milestone 3, not a later hardening pass. See [11-security-architecture.md](11-security-architecture.md) §11.7 for the corresponding security-architecture statement of this control.
+
+## 6.7 Where a tool's permissions are declared (added in v1.0)
+
+The Permissions column of §6.2 is a property of the *grant*, not of the tool, and it is declared in one place: the agent capability registry, `shared/agent_profiles/` ([05-agent-architecture.md](05-agent-architecture.md) §5.15). A tool derives its own caller allow-list from that registry rather than restating it:
+
+```python
+TOOL_NAME = 'ocr'
+ALLOWED_CALLERS = callers_allowed_for_tool(TOOL_NAME)
+```
+
+This closes a defect the baseline previously permitted by omission. The same permission relationship was expressible twice, in opposite directions — an agent's `allowed_tools` and a tool's `ALLOWED_CALLERS` — with only the second enforced and nothing checking the two agreed. Widening a grant meant editing every tool it touched, and a partial edit left the system in a state where the documented permission and the enforced one differed, which is worse than either being wrong consistently: a reviewer reading the agent would draw the wrong conclusion about what it could reach.
+
+Deriving the allow-list also means a grant added to the registry cannot fail to reach the tool that enforces it, and it keeps §6.2 answerable from one file rather than by reading N tool modules.
+
+**This is enforced, not advised.** `tests/unit/mara/test_agent_profiles.py` walks `tools/` and fails the build for any module whose `ALLOWED_CALLERS` is not the registry's own object — identity, not equality, so a hand-written `frozenset` that happens to match today is caught rather than passing until it drifts. A new tool therefore cannot reintroduce the old pattern by being written from this document without also reading the registry: CI rejects it with the correct call site in the failure message.
+
+Adding a new tool consequently requires, on top of §6.5's existing checklist, that its entry in §6.2's Permissions column be expressed as a grant in `shared/agent_profiles/profiles.py` for each agent that needs it.
