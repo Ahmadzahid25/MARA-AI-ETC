@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 from collections.abc import Awaitable, Callable
 
+from shared.agent_profiles import confidence_threshold_for, profile_for
 from shared.llm.client import TieredLLMClient
 from shared.llm.model_tiers import AgentName
 from shared.schemas.compliance import (
@@ -33,7 +34,9 @@ from shared.schemas.compliance import (
 )
 from shared.schemas.documents import Citation, DocumentExtractionRecord
 
-CONFIDENCE_THRESHOLD = 0.9
+PROFILE = profile_for(AgentName.COMPLIANCE.value)
+# Sourced from the profile registry — see shared/agent_profiles/profiles.py.
+CONFIDENCE_THRESHOLD = confidence_threshold_for(AgentName.COMPLIANCE.value)
 
 
 class ComplianceCheckParsingError(Exception):
@@ -103,8 +106,9 @@ class ComplianceAgent:
     checking — role/goal/tools/confidence-threshold, per docs/architecture/
     05-agent-architecture.md §5.1."""
 
+    profile = PROFILE
     confidence_threshold: float = CONFIDENCE_THRESHOLD
-    allowed_tools = ('rag_query', 'structured_database_query')
+    allowed_tools = PROFILE.allowed_tools
 
     def __init__(
         self,

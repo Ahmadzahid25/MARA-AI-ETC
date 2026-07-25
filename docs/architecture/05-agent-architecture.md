@@ -229,3 +229,35 @@ Each remaining agent boundary corresponds to either a distinct evidentiary domai
 ## 5.14 The agent-vs-service test (added in v1.0)
 
 Before adding any new component to `agents/` rather than `services/`, apply the test the Review Board used to reclassify the original twelve ([review/02-agent-and-tool-review.md](review/02-agent-and-tool-review.md) §4): **does this component make a genuinely ambiguous judgment call that requires weighing conflicting or incomplete evidence, or does it execute a well-defined transformation of already-decided input?** The former belongs in `agents/`, carries the full Agent Runtime (LLM-reasoning loop, confidence threshold, escalation policy). The latter belongs in `services/` — it either has no meaningful confidence score to miscalibrate (deterministic code either produces the right output or throws a typed error), or, if it needs any LLM call at all, that call is narrowly scoped and does not need the full agent apparatus around it. This test is binding for all future component additions, not just the original twelve — see [05-development-guidelines.md](../repo-audit/05-development-guidelines.md) §5.6.
+
+## 5.15 Where autonomy is declared (added in v1.0)
+
+§5.1 defines what every agent declares — allowed tools, confidence threshold, escalation target. This section fixes *where* those declarations live, because the answer determines how safely they can be changed later.
+
+### 5.15.1 One registry, not per-agent constants
+
+Every autonomy decision for every agent is declared in `shared/agent_profiles/` and nowhere else: the tool grant, the autonomy level (§5.15.2), the confidence floor, the approval gate, and whether the profile may reach the network. Tool modules derive their own caller allow-lists from that registry rather than restating them, so the two directions of the same permission relationship — "this agent may call OCR" and "OCR accepts this caller" — cannot disagree.
+
+This mirrors the reasoning already applied to model tiering in [04-technology-stack.md](04-technology-stack.md) §4.6.1 ("deliberately data, not code"), extended to the rest of the autonomy surface, and it is load-bearing for the same reason: a decision spread across N modules is a decision nobody can review as a whole, and one that drifts silently when only some of the N are updated. `shared/llm/model_tiers.py` remains the single authority for the per-agent model tier — the profile registry defers to it rather than duplicating it.
+
+Adjusting an agent's autonomy is therefore a reviewable one-file diff, and the invariants below are enforced in `tests/unit/mara/test_agent_profiles.py` rather than left to reviewer vigilance.
+
+### 5.15.2 Autonomy levels
+
+The tool grant and the latitude an agent has *within* that grant are separate dials, because they are separate risks:
+
+| Level | Meaning | Applies to |
+|---|---|---|
+| `BOUNDED` | The workflow template's node decides what runs and in what order; the agent contributes judgment at one step but does not choose the next one. | All seven agents today — the Agent Runtime's action/observation loop (§5.1, [02-system-architecture.md](02-system-architecture.md) Layer 4) is not built yet, and the registry records the level the current implementations actually have rather than the one they aspire to. |
+| `GUIDED` | The agent chooses tools and ordering freely, iterating tool → observation until it emits a result — strictly inside its grant, with the same confidence floor and approval gate applied to the output. | The intended level for the seven agents once the Agent Runtime lands. Widening *how* an agent works without widening what it can reach or weakening what a human signs off. |
+| `EXPLORATORY` | Full agentic loop, broad grant, no confidence gate. | Permitted only on a profile barred from the decision path — see §5.15.3. |
+
+The distinction matters because `BOUNDED` → `GUIDED` is a genuinely cheap change (reach and oversight are unchanged) while lowering a confidence floor or loosening an approval gate is a policy change to the guarantees in [01-vision.md](01-vision.md). Keeping them as separate fields is what stops "make the agent more capable" from silently meaning the second one.
+
+### 5.15.3 The exploration sandbox
+
+Open-ended analytical work — an officer exploring a portfolio question with no predetermined shape — is a real need that the bounded-template model (§5.2.1) deliberately does not serve. The registry answers it with a profile, `exploration_sandbox`, that carries `EXPLORATORY` autonomy and no confidence gate, and pays for that latitude with `can_inform_decision = False`.
+
+That flag is the whole design. Its output may not enter a workflow decision, an approval record, or a committee report, and the bar is structural — decision-path code calls `assert_can_inform_decision()` rather than each caller re-deciding — not a matter of officer discipline or a label in the UI. The sandbox is correspondingly **not** an eighth agent: it holds no position in any workflow template, appears in no entry of §7.3's catalogue, and is deliberately excluded from `AgentName`, which remains the seven agents §5.14 recognises.
+
+It is also not granted external egress. Sole-egress stays the Market Agent's (§5.7); a broadly-permissioned sandbox is precisely where a second egress path would otherwise be acquired by accident, which is what §11.7's network policy exists to prevent.

@@ -31,6 +31,7 @@ from tenacity import (
     wait_exponential,
 )
 
+from shared.agent_profiles import callers_allowed_for_tool
 from shared.schemas import (
     AuditSink,
     BoundingBox,
@@ -42,9 +43,12 @@ from shared.schemas import (
     log_tool_invocation,
 )
 
+TOOL_NAME = 'ocr'
 TIMEOUT_SECONDS = 30.0
 MAX_ATTEMPTS = 3  # first attempt + 2 retries, per §6.2's "Retries: 2"
-ALLOWED_CALLERS = frozenset({'document_agent'})
+# Derived from the profile registry rather than restated here, so this tool's
+# allow-list cannot drift from the grant that shared/agent_profiles declares.
+ALLOWED_CALLERS = callers_allowed_for_tool(TOOL_NAME)
 
 
 class OCRRegion(BaseModel):
