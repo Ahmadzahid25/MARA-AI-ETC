@@ -2,7 +2,9 @@ import { Route, Routes } from 'react-router';
 import { AuthGuard } from './components/AuthGuard';
 import { LoginPage } from './pages/LoginPage';
 import { WorkspacePage } from './pages/WorkspacePage';
+import { DashboardPage } from './pages/DashboardPage';
 import { ReviewConsolePage } from './pages/ReviewConsolePage';
+import { AdminConsolePage } from './pages/AdminConsolePage';
 
 export function App() {
   return (
@@ -17,10 +19,26 @@ export function App() {
         }
       />
       <Route
+        path="/dashboard"
+        element={
+          <AuthGuard>
+            <DashboardPage />
+          </AuthGuard>
+        }
+      />
+      <Route
         path="/review"
         element={
           <AuthGuard>
             <ReviewConsolePage />
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <AuthGuard>
+            <AdminConsolePage />
           </AuthGuard>
         }
       />
