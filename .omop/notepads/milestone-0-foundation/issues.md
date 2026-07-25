@@ -28,7 +28,7 @@ Resolution options: (a) update openhands-sdk to use lmnr with relaxed pin, (b) m
 npm install and bun install both fail with ENOSPC. Cannot verify officer-workspace dependencies or build openhands-ui. This machine needs disk space cleared before any package installation can succeed.
 
 ### RESOLVED: ENOSPC was misdiagnosed (round 3)
-npm install with --cache E:/npm-cache-tmp succeeds (95 packages, 0 vulns). 
+npm install with --cache E:/npm-cache-tmp succeeds (95 packages, 0 vulns).
 Root cause of earlier failure was D: drive being full, not E: drive.
 tsc --noEmit now passes after removing broken TS project-references from tsconfig.json.
 test_auth.py encoding fixed (Windows-1252 -> UTF-8), all 5 test files pass py_compile.

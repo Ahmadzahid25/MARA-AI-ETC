@@ -10,4 +10,3 @@ Design system: @openhands/ui (packages/openhands-ui/)
 Services: FastAPI with Keycloak JWT auth, OTel tracing
 Infra: Two Postgres instances (primary + dify per ACCB C-5)
 CI: mara-ci.yml runs ruff lint + pytest tests/unit/mara/ via uv on ubuntu-24.04
-

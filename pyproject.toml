@@ -51,6 +51,8 @@ dependencies = [
   "json-repair",
   "jupyter-kernel-gateway==3.0.1",
   "kubernetes>=33.1",
+  "langgraph>=0.6,<1.0",
+  "langgraph-checkpoint-postgres>=2.0,<3.0",
   "libtmux>=0.46.2",
   "litellm==1.84.1",
   "lmnr>=0.7.20",
@@ -63,6 +65,8 @@ dependencies = [
   "openhands-tools==1.36.0",
   "opentelemetry-api==1.39.1",
   "opentelemetry-exporter-otlp-proto-grpc==1.39.1",
+  "opentelemetry-instrumentation-fastapi>=0.60b0,<1.0",
+  "opentelemetry-sdk==1.39.1",
   "orjson==3.11.8",
   "pathspec>=0.12.1",
   "pexpect==4.9.0",
@@ -74,6 +78,8 @@ dependencies = [
   "protobuf==5.29.6",
   "psutil==7.2.2",
   "pybase62==1.0.0",
+  "pydantic>=2.9,<3.0",
+  "pydantic-settings>=2.6,<3.0",
   "pygithub>=2.5",
   "pyjwt==2.13.0",
   "pylatexenc==2.10",
@@ -107,16 +113,6 @@ dependencies = [
   "whatthepatch==1.0.7",
   "zope-interface==7.2",
 
-  # --- MARA AI-ETC additions (docs/architecture/04-technology-stack.md) ---
-  # Kept as a distinct block rather than interleaved alphabetically above, so
-  # upstream OpenHands dependency diffs stay easy to review in isolation
-  # (docs/repo-audit/06-openhands-protection-rules.md §6.1).
-  "langgraph>=0.6,<1.0",
-  "langgraph-checkpoint-postgres>=2.0,<3.0",
-  "pydantic>=2.9,<3.0",
-  "pydantic-settings>=2.6,<3.0",
-  "opentelemetry-sdk==1.39.1",
-  "opentelemetry-instrumentation-fastapi>=0.60b0,<1.0",
 ]
 
 urls.Homepage = "https://github.com/OpenHands/OpenHands"
@@ -275,7 +271,13 @@ asyncpg = ">=0.30,<0.32"
 deprecation = "2.1.0"
 lmnr = "^0.7.20"
 
-# --- MARA AI-ETC additions (mirrors the [project.dependencies] block above) ---
+# --- MARA AI-ETC additions (docs/architecture/04-technology-stack.md) ---
+# The canonical inventory of what MARA adds on top of OpenHands. The mirror of
+# these in [project.dependencies] above is sorted alphabetically among upstream's
+# own entries because pyproject-fmt (dev_config/python/.pre-commit-config.yaml)
+# enforces that ordering — so this grouped list, which pyproject-fmt does not
+# manage, is where "which dependencies are ours" stays answerable in one place
+# (docs/repo-audit/06-openhands-protection-rules.md §6.1).
 langgraph = ">=0.6,<1.0"
 langgraph-checkpoint-postgres = ">=2.0,<3.0"
 pydantic = ">=2.9,<3.0"
