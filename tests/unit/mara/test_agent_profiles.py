@@ -9,6 +9,10 @@ Architecture Baseline v1.0 treats as load-bearing, not a stylistic preference.
 
 from __future__ import annotations
 
+import importlib
+import pkgutil
+from types import ModuleType
+
 import pytest
 from pydantic import ValidationError
 
@@ -132,20 +136,69 @@ def test_thresholds_match_the_agent_summary_table() -> None:
 # ── Tool allow-list derivation — the drift this registry exists to remove ──
 
 
+def _tool_modules_declaring_an_allow_list() -> list[ModuleType]:
+    """Every module under ``tools/`` that enforces a caller allow-list.
+
+    Discovered by walking the package rather than listed here on purpose: a
+    hand-maintained list would have to be updated by the same person who just
+    added a tool the wrong way, which is precisely the discipline this registry
+    exists to stop relying on.
+    """
+
+    import tools
+
+    modules: list[ModuleType] = []
+    for module_info in pkgutil.walk_packages(tools.__path__, prefix='tools.'):
+        module = importlib.import_module(module_info.name)
+        if hasattr(module, 'ALLOWED_CALLERS'):
+            modules.append(module)
+    return modules
+
+
+def test_the_walker_finds_the_known_tools() -> None:
+    """Guards the two tests below from silently passing on an empty set if the
+    discovery mechanism itself breaks."""
+
+    found = {m.__name__ for m in _tool_modules_declaring_an_allow_list()}
+    assert found >= {
+        'tools.ocr.ocr_tool',
+        'tools.documents.pdf_parse',
+        'tools.documents.classification',
+    }
+
+
+def test_every_tool_names_itself() -> None:
+    """A tool that enforces an allow-list must declare TOOL_NAME, since that is
+    the key its grant is looked up under."""
+
+    for module in _tool_modules_declaring_an_allow_list():
+        assert hasattr(module, 'TOOL_NAME'), (
+            f'{module.__name__} enforces ALLOWED_CALLERS but declares no '
+            f'TOOL_NAME to resolve its grant against'
+        )
+
+
 def test_tool_allow_lists_are_derived_not_restated() -> None:
-    """The three implemented tools must report exactly the callers the registry
-    grants. Restating an allow-list inside a tool module — the pattern this
-    registry replaced — would show up here as a mismatch."""
+    """Every tool's allow-list must *be* the registry's answer, not a copy of
+    it that happens to agree today.
 
-    from tools.documents.classification import (
-        ALLOWED_CALLERS as CLASSIFICATION_CALLERS,
-    )
-    from tools.documents.pdf_parse import ALLOWED_CALLERS as PDF_CALLERS
-    from tools.ocr.ocr_tool import ALLOWED_CALLERS as OCR_CALLERS
+    Identity rather than equality, because equality cannot tell a derived
+    allow-list from a hand-written ``frozenset({'document_agent'})`` that
+    matches by coincidence — and it is the hand-written one, drifting a release
+    later, that this registry exists to prevent. ``callers_allowed_for_tool``
+    is cached so the derived call returns the same object every time.
+    """
 
-    assert OCR_CALLERS == callers_allowed_for_tool('ocr')
-    assert PDF_CALLERS == callers_allowed_for_tool('pdf_parse')
-    assert CLASSIFICATION_CALLERS == callers_allowed_for_tool('document_classification')
+    for module in _tool_modules_declaring_an_allow_list():
+        expected = callers_allowed_for_tool(module.TOOL_NAME)
+        assert module.ALLOWED_CALLERS is expected, (
+            f'{module.__name__}.ALLOWED_CALLERS is not derived from the '
+            f'profile registry. Replace it with:\n\n'
+            f'    ALLOWED_CALLERS = callers_allowed_for_tool(TOOL_NAME)\n\n'
+            f'and declare the grant in shared/agent_profiles/profiles.py '
+            f'(registry grants {sorted(expected)}, module has '
+            f'{sorted(module.ALLOWED_CALLERS)}).'
+        )
 
 
 def test_document_tools_remain_document_agent_only() -> None:

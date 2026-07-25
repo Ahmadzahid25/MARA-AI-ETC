@@ -39,6 +39,7 @@ document for the governance rule this registry is subject to.
 from __future__ import annotations
 
 from enum import StrEnum
+from functools import cache
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -258,6 +259,7 @@ def profile_for(profile_name: str) -> AgentProfile:
         ) from None
 
 
+@cache
 def callers_allowed_for_tool(tool_name: str) -> frozenset[str]:
     """Every profile granted ``tool_name``, as the tool's caller allow-list.
 
@@ -268,6 +270,14 @@ def callers_allowed_for_tool(tool_name: str) -> frozenset[str]:
 
     Returns an empty set for a tool no profile has been granted — correct, and
     strict: an ungranted tool rejects every caller rather than defaulting open.
+
+    Cached, and load-bearingly so: returning the *same object* for a given tool
+    name is what lets tests/unit/mara/test_agent_profiles.py distinguish a tool
+    that derived its allow-list from one that hand-wrote an identical
+    ``frozenset``. An equal-but-separate object is the exact shape of the drift
+    this registry exists to prevent, and equality alone cannot see it. Safe to
+    cache because profiles are import-time configuration: ``AgentProfile`` is
+    frozen and ``AGENT_PROFILES`` is not mutated at runtime.
     """
 
     return frozenset(
