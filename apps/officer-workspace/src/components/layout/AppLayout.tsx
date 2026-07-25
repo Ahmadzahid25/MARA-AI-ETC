@@ -12,6 +12,7 @@ const NAV_ITEMS = [
   { to: '/', label: 'Workspace' },
   { to: '/dashboard', label: 'Dashboard' },
   { to: '/review', label: 'Review Console' },
+  { to: '/admin', label: 'Admin Console' },
 ];
 
 export function AppLayout({ title, subtitle, children }: AppLayoutProps) {

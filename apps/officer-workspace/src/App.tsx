@@ -4,6 +4,7 @@ import { LoginPage } from './pages/LoginPage';
 import { WorkspacePage } from './pages/WorkspacePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ReviewConsolePage } from './pages/ReviewConsolePage';
+import { AdminConsolePage } from './pages/AdminConsolePage';
 
 export function App() {
   return (
@@ -30,6 +31,14 @@ export function App() {
         element={
           <AuthGuard>
             <ReviewConsolePage />
+          </AuthGuard>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <AuthGuard>
+            <AdminConsolePage />
           </AuthGuard>
         }
       />
