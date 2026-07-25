@@ -8,7 +8,7 @@ export interface ChatMessage {
   agent_name?: string;
 }
 
-export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'awaiting_approval' | 'failed';
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'awaiting_approval' | 'blocked' | 'failed';
 
 export interface Task {
   id: string;

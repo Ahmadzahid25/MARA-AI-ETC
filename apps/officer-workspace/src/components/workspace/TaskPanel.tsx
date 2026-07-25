@@ -10,6 +10,7 @@ const STATUS_CONFIG: Record<
   in_progress: { label: 'In Progress', color: 'aqua' },
   completed: { label: 'Completed', color: 'green' },
   awaiting_approval: { label: 'Awaiting Approval', color: 'primaryDark' },
+  blocked: { label: 'Blocked', color: 'red' },
   failed: { label: 'Failed', color: 'red' },
 };
 
