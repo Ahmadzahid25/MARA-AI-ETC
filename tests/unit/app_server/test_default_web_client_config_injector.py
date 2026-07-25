@@ -3,8 +3,11 @@
 This module tests environment variable handling in DefaultWebClientConfigInjector.
 """
 
+import importlib.util
 import os
 from unittest.mock import patch
+
+import pytest
 
 
 class TestGetPosthogClientKey:
@@ -747,6 +750,15 @@ class TestGetSlackEnabled:
             assert _get_slack_enabled() is False
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec('server') is None,
+    reason='These cases patch server.services.*, which lived in enterprise/ — '
+    'removed under ACCB Condition C-3 (docs/architecture/04-technology-stack.md '
+    '§4.1). _get_email_enabled() already falls back to SMTP_HOST/RESEND_API_KEY '
+    'when that import fails, so the behaviour under test here is unreachable in '
+    'this fork rather than broken. Skipped instead of deleted so the cases '
+    'return automatically if the module ever does.',
+)
 class TestGetEmailEnabled:
     """Test cases for _get_email_enabled helper function."""
 
