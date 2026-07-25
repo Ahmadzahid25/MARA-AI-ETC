@@ -13,10 +13,12 @@ from agents.compliance_agent.compliance_agent import (
 )
 from shared.schemas.compliance import ComplianceStatus
 from shared.schemas.documents import (
-    Citation,
     DocumentClassification,
     DocumentExtractionRecord,
 )
+from shared.schemas.knowledge import PolicyCitation
+
+POLICY_CLAUSE = PolicyCitation(document_id='policy-1', version='v3', locator='4.2')
 
 
 def _record() -> DocumentExtractionRecord:
@@ -84,8 +86,8 @@ class TestComplianceAgentDefaultStub:
 class TestComplianceAgentWithInjectedLookupAndChecker:
     @pytest.mark.asyncio
     async def test_hard_violation_is_surfaced(self) -> None:
-        async def lookup(requirement: str) -> list[Citation]:
-            return [Citation(document_id='policy-1', page=3)]
+        async def lookup(requirement: str) -> list[PolicyCitation]:
+            return [POLICY_CLAUSE]
 
         async def checker(requirement, citations, record):
             return ComplianceStatus.FAIL, 'business registration expired'
@@ -96,14 +98,12 @@ class TestComplianceAgentWithInjectedLookupAndChecker:
         )
 
         assert checklist.has_hard_violation is True
-        assert checklist.items[0].policy_citation == Citation(
-            document_id='policy-1', page=3
-        )
+        assert checklist.items[0].policy_citation == POLICY_CLAUSE
 
     @pytest.mark.asyncio
     async def test_pass_does_not_count_as_hard_violation(self) -> None:
-        async def lookup(requirement: str) -> list[Citation]:
-            return [Citation(document_id='policy-1', page=1)]
+        async def lookup(requirement: str) -> list[PolicyCitation]:
+            return [POLICY_CLAUSE]
 
         async def checker(requirement, citations, record):
             return ComplianceStatus.PASS, 'satisfied'
@@ -117,8 +117,8 @@ class TestComplianceAgentWithInjectedLookupAndChecker:
 
     @pytest.mark.asyncio
     async def test_default_checker_calls_llm_with_compliance_tier(self) -> None:
-        async def lookup(requirement: str) -> list[Citation]:
-            return [Citation(document_id='policy-1', page=1)]
+        async def lookup(requirement: str) -> list[PolicyCitation]:
+            return [POLICY_CLAUSE]
 
         mock_response = MagicMock()
         mock_response.choices = [

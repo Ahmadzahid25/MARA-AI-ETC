@@ -27,12 +27,14 @@ from collections.abc import Awaitable, Callable
 from shared.agent_profiles import confidence_threshold_for, profile_for
 from shared.llm.client import TieredLLMClient
 from shared.llm.model_tiers import AgentName
+from shared.provenance import ProvenanceLedger
 from shared.schemas.compliance import (
     ComplianceChecklist,
     ComplianceChecklistItem,
     ComplianceStatus,
 )
-from shared.schemas.documents import Citation, DocumentExtractionRecord
+from shared.schemas.documents import DocumentExtractionRecord
+from shared.schemas.knowledge import PolicyCitation
 
 PROFILE = profile_for(AgentName.COMPLIANCE.value)
 # Sourced from the profile registry — see shared/agent_profiles/profiles.py.
@@ -46,9 +48,11 @@ class ComplianceCheckParsingError(Exception):
 
 
 # requirement description -> matching policy clause citations (empty = no
-# applicable policy found). The default always returns [] — there is no
-# services/knowledge_service to query yet.
-PolicyLookup = Callable[[str], Awaitable[list[Citation]]]
+# applicable policy found). The Milestone-2 implementation is
+# agents/compliance_agent/policy_lookup.py's make_rag_policy_lookup(); the
+# default below stays as the honest no-corpus behavior for environments with no
+# Knowledge Service wired up.
+PolicyLookup = Callable[[str], Awaitable[list[PolicyCitation]]]
 
 # requirement, the policy citations found for it, and the document under
 # review -> (status, notes). Only invoked when policy_lookup found at least
@@ -56,21 +60,32 @@ PolicyLookup = Callable[[str], Awaitable[list[Citation]]]
 # unreachable via the default lookup, but is implemented and tested now so
 # Milestone 2 only has to swap policy_lookup, not this agent's structure.
 ComplianceChecker = Callable[
-    [str, list[Citation], DocumentExtractionRecord],
+    [str, list[PolicyCitation], DocumentExtractionRecord],
     Awaitable[tuple[ComplianceStatus, str]],
 ]
 
 
-async def _default_policy_lookup(requirement: str) -> list[Citation]:
+async def _default_policy_lookup(requirement: str) -> list[PolicyCitation]:
+    """No corpus wired up: every requirement resolves to NO_POLICY_FOUND.
+
+    §5.4's specified behavior for an inconclusive corpus lookup, kept as the
+    default so an environment without a Knowledge Service produces honest
+    "no applicable policy found" findings rather than silently absent checks.
+    Production wiring is make_rag_policy_lookup() in this package.
+    """
+
     return []
 
 
 def _build_check_prompt(
-    requirement: str, citations: list[Citation], record: DocumentExtractionRecord
+    requirement: str,
+    citations: list[PolicyCitation],
+    record: DocumentExtractionRecord,
 ) -> str:
     fields_text = '\n'.join(f'- {f.name}: {f.value}' for f in record.fields)
     citations_text = '\n'.join(
-        f'- document {c.document_id}, page {c.page}' for c in citations
+        f'- document {c.document_id} v{c.version}, clause {c.locator}'
+        for c in citations
     )
     return (
         f'Requirement: {requirement}\n\n'
@@ -125,6 +140,8 @@ class ComplianceAgent:
         document_id: str,
         extraction_record: DocumentExtractionRecord,
         requirements: list[str],
+        *,
+        ledger: ProvenanceLedger | None = None,
     ) -> ComplianceChecklist:
         """Check ``extraction_record`` against each of ``requirements``.
         Per §5.4's escalation rule, any ``FAIL`` (hard violation) is
@@ -132,6 +149,15 @@ class ComplianceAgent:
         method does not itself halt anything; that's the workflow's
         Validation-stage responsibility (docs/architecture/
         07-workflow-architecture.md §7.1).
+
+        When ``ledger`` is supplied, every policy citation in the finished
+        checklist is verified against what the RAG tool actually returned during
+        this task, and a citation naming a clause that was never retrieved
+        raises ``FabricatedCitationError`` rather than reaching the officer
+        (docs/architecture/06-tool-architecture.md §6.1). Pass the same ledger
+        that was given to ``make_rag_policy_lookup``; omitting it skips the
+        check, which is only appropriate for a caller whose lookup does not
+        retrieve — the default stub, or an injected test double.
         """
 
         items: list[ComplianceChecklistItem] = []
@@ -165,12 +191,26 @@ class ComplianceAgent:
                 )
             )
 
-        return ComplianceChecklist(document_id=document_id, items=items)
+        checklist = ComplianceChecklist(document_id=document_id, items=items)
+
+        if ledger is not None:
+            # §6.1: the check happens before the output reaches a human, and is
+            # deterministic — the agent gets no say in whether its own citations
+            # count as verified.
+            ledger.require_verified(
+                tuple(
+                    item.policy_citation.to_citable_ref()
+                    for item in checklist.items
+                    if item.policy_citation is not None
+                )
+            )
+
+        return checklist
 
     async def _default_checker(
         self,
         requirement: str,
-        citations: list[Citation],
+        citations: list[PolicyCitation],
         record: DocumentExtractionRecord,
     ) -> tuple[ComplianceStatus, str]:
         prompt = _build_check_prompt(requirement, citations, record)

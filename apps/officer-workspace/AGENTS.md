@@ -70,9 +70,61 @@ is the officer-facing UI. Full context, in this order:
   authenticated workspace shell.
 - ❌ Not built yet: Officer Workspace chat/task view, Review & Approval
   Console, Dashboard, Admin Console.
-- ❌ **No backend agent exists yet** (Document Agent is Milestone 1, not
-  started as of this writing). This means there is no real API to call for
-  agent output. See below.
+- ⚠️ Backend agents exist but are **not yet exposed over an API you can call**.
+  Document Agent and Compliance Agent are implemented; the Gateway routes for
+  them are not complete. Keep building against the mocks — but build against
+  the *real* contracts below, which are now settled, not against a guess.
+
+## Backend contracts that are settled (build against these, not a guess)
+
+These Python modules are the source of truth. Mirror them in
+`src/types/` — do not invent a parallel shape.
+
+| What | Contract |
+|---|---|
+| Document extraction | [`shared/schemas/documents.py`](../../shared/schemas/documents.py) |
+| Approval decisions | [`shared/schemas/approval.py`](../../shared/schemas/approval.py) |
+| Compliance checklist | [`shared/schemas/compliance.py`](../../shared/schemas/compliance.py) |
+| Policy citations & retrieval | [`shared/schemas/knowledge.py`](../../shared/schemas/knowledge.py) |
+
+### There are two different citation shapes — do not merge them
+
+This trips people up, so it is worth being explicit. They are not
+interchangeable and a single "Citation" component that handles both will be
+wrong for one of them:
+
+- **`Citation`** (`documents.py`) — points into an *applicant's uploaded
+  document*: `document_id` + `page` + optional `bounding_box`. The bounding box
+  is what makes §10.4's "one-click access to the underlying source document"
+  land on the right region of the right page.
+- **`PolicyCitation`** (`knowledge.py`) — points into the *policy corpus*:
+  `document_id` + `version` + `locator` (clause/section) + `relevance` +
+  `superseded_on`. There is no bounding box and no page. **The version is not
+  decoration** — a compliance finding is decided against a specific policy
+  version, and an officer reviewing it needs to see which. Never render a policy
+  citation without its version.
+
+### Three compliance states to render, not two
+
+`ComplianceStatus` is `pass` / `fail` / `exception` / **`no_policy_found`**.
+
+`no_policy_found` means the corpus was searched and nothing applicable was
+found — it is an honest finding, not an error state and not a silent blank.
+Render it as a distinct, visible outcome. An officer must be able to tell "we
+checked and no policy applies" from "we failed to check".
+
+Related: a retrieval can come back with `no_confident_match` set — candidates
+existed but none passed the relevance threshold, with `withheld_below_threshold`
+saying how many were dropped. If you surface retrieval detail anywhere, that is
+a different message from "nothing in the corpus".
+
+### Stale citations
+
+`PolicyCitation.superseded_on` is set when the cited version has since been
+replaced. A finding citing a superseded policy is not necessarily *wrong* — it
+may be a historical decision made while that version was in force — so do not
+render it as an error. Flag it as "cited policy has since been superseded" and
+let the officer judge.
 
 ## When something you need doesn't exist yet
 
