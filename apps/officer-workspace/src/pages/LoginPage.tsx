@@ -1,6 +1,15 @@
+import { useNavigate } from 'react-router';
 import { login } from '../services/auth';
+import { enableDevMode } from '../services/dev-auth';
 
 export function LoginPage() {
+  const navigate = useNavigate();
+
+  function handleDevMode() {
+    enableDevMode();
+    navigate('/', { replace: true });
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50">
       <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 shadow-md">
@@ -26,6 +35,17 @@ export function LoginPage() {
         >
           Sign in with SSO (Keycloak)
         </button>
+
+        {import.meta.env.DEV && (
+          <button
+            id="btn-dev-mode"
+            onClick={handleDevMode}
+            className="w-full rounded-md border border-dashed border-gray-300 bg-gray-50 px-4 py-2
+                       text-sm text-gray-500 transition-colors hover:bg-gray-100"
+          >
+            Continue with Dev Mode (local only)
+          </button>
+        )}
 
         <p className="text-center text-xs text-gray-400">
           Powered by MARA AI-ETC — Milestone 0

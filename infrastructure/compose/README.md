@@ -11,6 +11,7 @@ docker compose \
   -f docker-compose.yml \
   -f infrastructure/compose/docker-compose.mara.yml \
   -f infrastructure/compose/docker-compose.observability.yml \
+  -f infrastructure/compose/docker-compose.dify.yml \
   up -d
 ```
 
@@ -18,6 +19,7 @@ docker compose \
 |---|---|
 | `docker-compose.mara.yml` | `postgres-primary` (pgvector, Audit Memory partitioned from day one), `postgres-dify` (separate instance — ACCB Condition C-5), `redis`, `minio` (+ bucket init), `keycloak` (realm auto-imported from `init/keycloak-realm-mara-ai-etc.json`) |
 | `docker-compose.observability.yml` | `otel-collector`, `prometheus`, `loki`, `grafana`, `langfuse` (+ its own Postgres) |
+| `docker-compose.dify.yml` | `dify-api`, `dify-worker`, `dify-web` — knowledge/RAG engine (Milestone 2). Runs against `postgres-dify` only (ACCB C-5), no outbound internet (§11.7). Backend wires `DIFY_API_URL=http://dify-api:5001/v1` via `services/knowledge_service`. |
 
 ## Ports (dev defaults, matching `configs/dev/settings.toml`)
 
@@ -33,5 +35,7 @@ docker compose \
 | loki | 3100 | |
 | langfuse | 3300 | |
 | otel-collector | 4317 (gRPC), 4318 (HTTP) | |
+| dify-api | 5001 | `REPLACE_ME_DEV_ONLY` init password — internal URL: `http://dify-api:5001/v1` |
+| dify-web | 3001 | Admin UI (host only; 3000 is Grafana) |
 
 Milestone 0's acceptance criterion ("a synthetic end-to-end trace is visible in Grafana/Langfuse," [`docs/architecture/14-roadmap.md`](../../docs/architecture/14-roadmap.md) §14.2) is verified against this stack once it's actually running — this compose scaffold is a precondition for that check, not the check itself.

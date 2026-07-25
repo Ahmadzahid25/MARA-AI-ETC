@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { getUser, handleRedirectCallback } from '../services/auth';
+import { isDevMode } from '../services/dev-auth';
 
 interface AuthGuardProps {
   children: ReactNode;
@@ -8,7 +9,8 @@ interface AuthGuardProps {
 
 /**
  * Route guard that checks for an authenticated Keycloak session.
- * If the URL contains OIDC callback parameters, handles the callback first.
+ * In development (import.meta.env.DEV), also accepts a dev-mode session
+ * set by the LoginPage "Dev Mode" button.
  * If no authenticated user is found, redirects to /login.
  */
 export function AuthGuard({ children }: AuthGuardProps) {
@@ -18,6 +20,13 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   useEffect(() => {
     async function check() {
+      // Dev mode bypass (local dev only)
+      if (import.meta.env.DEV && isDevMode()) {
+        setAuthenticated(true);
+        setChecking(false);
+        return;
+      }
+
       // Check if this is an OIDC redirect (has code/state params)
       const params = new URLSearchParams(window.location.search);
       const isCallback = params.has('code') || params.has('state');
@@ -25,7 +34,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
       if (isCallback) {
         const user = await handleRedirectCallback();
         if (user) {
-          // Redirect to clean URL without OIDC params
           window.location.replace(window.location.origin + '/');
           return;
         }
@@ -47,8 +55,11 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   if (checking) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-gray-500">Authenticating…</p>
+      <div className="flex h-screen items-center justify-center bg-[#0a0f1e]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#2563eb] border-t-transparent" />
+          <p className="text-sm text-slate-400">Authenticating…</p>
+        </div>
       </div>
     );
   }
