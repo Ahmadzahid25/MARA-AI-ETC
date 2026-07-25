@@ -17,6 +17,15 @@ from shared.schemas.documents import (
     ExtractedField,
     ExtractionSource,
 )
+from shared.schemas.knowledge import (
+    DocumentKind,
+    PolicyCitation,
+    RetrievalFilters,
+    RetrievalQuery,
+    RetrievalResult,
+    RetrievedChunk,
+    SensitivityClass,
+)
 from shared.schemas.tooling import (
     AuditSink,
     ToolError,
@@ -40,10 +49,17 @@ __all__ = [
     'ComplianceChecklistItem',
     'ComplianceStatus',
     'DocumentClassification',
+    'DocumentKind',
     'DocumentExtractionRecord',
     'ExtractedField',
     'ExtractionSource',
     'FieldCorrection',
+    'PolicyCitation',
+    'RetrievalFilters',
+    'RetrievalQuery',
+    'RetrievalResult',
+    'RetrievedChunk',
+    'SensitivityClass',
     'ToolError',
     'ToolExternalServiceError',
     'ToolInputError',

@@ -21,7 +21,7 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-from shared.schemas.documents import Citation
+from shared.schemas.knowledge import PolicyCitation
 
 
 class ComplianceStatus(str, Enum):
@@ -35,11 +35,17 @@ class ComplianceChecklistItem(BaseModel):
     """One requirement's check result, citing the specific policy clause it
     was checked against — ``policy_citation`` is ``None`` only when
     ``status`` is ``NO_POLICY_FOUND``, since there's nothing to cite in that
-    case."""
+    case.
+
+    The citation is a ``PolicyCitation`` (document + version + clause), not the
+    page-based ``Citation`` used for applicant documents: a compliance finding
+    has to name the policy *version* it was decided against, or §9.4's
+    reproducibility guarantee cannot be checked after the policy is revised.
+    """
 
     requirement: str = Field(min_length=1)
     status: ComplianceStatus
-    policy_citation: Citation | None = None
+    policy_citation: PolicyCitation | None = None
     notes: str = Field(default='')
 
     def is_hard_violation(self) -> bool:

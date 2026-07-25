@@ -76,6 +76,62 @@ runs on. Read in this order:
   see item 7 below, this is now part of your immediate verification pass,
   not a separate task.
 
+- **New since the last update (Milestone 2, backend side):** the RAG tool
+  (`tools/rag/`) and the Knowledge Service *contract*
+  (`services/knowledge_service/contract.py`) are implemented and tested against
+  stub backends. **Dify itself is not deployed, and that is your work** — see
+  "Coming next" below. Nothing in the backend blocks on it; the contract was
+  defined first precisely so these two tracks run in parallel.
+
+## Coming next: Dify, on its own database instance
+
+This lands in Milestone 2 ([`14-roadmap.md`](../docs/architecture/14-roadmap.md)
+§14.4) and it is your side of it. Read
+[`09-knowledge-architecture.md`](../docs/architecture/09-knowledge-architecture.md)
+§9.1.1 before starting.
+
+**The non-negotiable part: Dify runs against `postgres-dify`, never
+`postgres-primary`.** This is ACCB Condition C-5, not a preference. The reason
+is concrete rather than stylistic — running a vendored service you do not intend
+to schema-migrate in lockstep with your own application against a shared
+database is the normal way an upgrade of one silently endangers the other. You
+already have `postgres-dify` as a separate instance in
+`docker-compose.mara.yml`; keep it that way, and resist any Dify quickstart that
+points it at the main database.
+
+Downstream consequences that are yours to carry, per §9.1.1:
+
+- **Two databases, two backup schedules, two restore procedures**, tracked as
+  such in the DR story ([`13-deployment-architecture.md`](../docs/architecture/13-deployment-architecture.md)).
+  A DR drill that only restores `postgres-primary` has not been rehearsed.
+- The platform's own pgvector index (for corpora outside Dify's direct
+  management, §9.7's precedent-decision store) stays on `postgres-primary` and
+  must stay clearly labelled as separate from whatever Dify considers
+  authoritative for its own state.
+
+**What the backend needs from you, concretely:** a reachable Dify instance plus
+the connection/credential config, so someone can implement
+`KnowledgeBackend.retrieve()` against it. The interface is one async method —
+see `services/knowledge_service/contract.py`. You are not implementing the
+adapter (that is backend work, in `services/`), you are making Dify exist and be
+reachable.
+
+**One behavior to preserve when you wire config:** an unconfigured backend must
+raise, not return empty results. `services/knowledge_service` already does this
+deliberately — "the corpus was searched and had nothing" and "no corpus was
+reached" must stay distinguishable, or a misconfigured deployment produces
+confident "no applicable policy found" compliance findings against a corpus it
+never touched. If you add a config path that silently degrades to an empty
+corpus, you have removed that guarantee.
+
+**Egress posture is unchanged by this.** Dify is an internal service; it does
+not get outbound internet access. The sole external-egress path in this platform
+remains the Market Agent's search tool
+([`11-security-architecture.md`](../docs/architecture/11-security-architecture.md)
+§11.7), and that is enforced by network policy, not convention — a second egress
+path acquired incidentally while wiring a new service is exactly what §11.7
+exists to prevent.
+
 ## Immediate task: stand up and verify the Docker stack
 
 This is Milestone 0's last open item
