@@ -6,7 +6,6 @@
   "registrationAllowed": false,
   "resetPasswordAllowed": true,
   "bruteForceProtected": true,
-  "_comment_roles": "Matches docs/architecture/11-security-architecture.md §11.2's RBAC role list exactly. Add a new role here in the same PR as adding it to that document, per docs/repo-audit/05-development-guidelines.md §5.5.",
   "roles": {
     "realm": [
       { "name": "entrepreneurship_officer", "description": "Day-to-day case owner; can initiate and approve within assigned branch/state (ABAC-scoped)." },
@@ -56,7 +55,7 @@
       "providerId": "CONFIGURE_TOTP",
       "enabled": true,
       "defaultAction": false,
-      "_comment": "MFA is non-negotiable for any role with approval authority (docs/architecture/11-security-architecture.md §11.2). Enforced per-role via a client scope / conditional flow — not enabled by default for every account so dev accounts stay usable, per configs/dev/settings.toml's mfa_required=false. Set defaultAction true and mfa_required=true before staging/production import."
+      "config": {}
     }
   ]
 }
