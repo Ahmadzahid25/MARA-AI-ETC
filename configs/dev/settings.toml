@@ -32,3 +32,8 @@ mfa_required = false  # relaxed only in dev — see docs/architecture/11-securit
 [observability]
 otel_exporter_endpoint = "http://localhost:4317"
 langfuse_host = "http://localhost:3300"
+
+[dify]
+api_url = "http://localhost:5001/v1"
+api_key = "dataset-Jti7YXTZlgZ-8yIjpas1CovX6RpL5_zD"
+dataset_id = "2d2b03a9-17b7-4aad-9993-7c5a7abd8670"

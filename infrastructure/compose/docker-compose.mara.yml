@@ -33,7 +33,7 @@ services:
       - "5432:5432"
     volumes:
       - mara_postgres_primary_data:/var/lib/postgresql/data
-      - ./init/postgres-primary-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./infrastructure/compose/init/postgres-primary-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mara -d mara_platform"]
       interval: 5s
@@ -122,7 +122,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./init/keycloak-realm-mara-ai-etc.json:/opt/keycloak/data/import/realm.json:ro
+      - ./infrastructure/compose/init/keycloak-realm-mara-ai-etc.json:/opt/keycloak/data/import/realm.json:ro
     healthcheck:
       # Keycloak 26 UBI-minimal has neither curl nor wget.
       # Use bash /dev/tcp to verify the management port (9000) is accepting

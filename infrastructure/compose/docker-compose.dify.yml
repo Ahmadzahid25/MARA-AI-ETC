@@ -81,10 +81,16 @@ services:
       # ── App secrets (dev placeholders — replace before staging) ───────────
       SECRET_KEY: REPLACE_ME_DEV_ONLY_dify_secret_key_32chars_min
       INIT_PASSWORD: REPLACE_ME_DEV_ONLY
+      # ── Marketplace / Plugins — point to internal plugin daemon service ────
+      PLUGIN_DAEMON_URL: http://dify-plugin-daemon:5002
+      PLUGIN_DAEMON_KEY: plugin-api-key
+      # ── CORS — allow all local dev origins (* in dev)
+      CONSOLE_CORS_ALLOW_ORIGINS: "*"
+      WEB_API_CORS_ALLOW_ORIGINS: "*"
       # ── Internal service config ───────────────────────────────────────────
-      CONSOLE_WEB_URL: ""
+      CONSOLE_WEB_URL: http://localhost:3001
       SERVICE_API_URL: http://dify-api:5001
-      APP_WEB_URL: http://dify-web:3000
+      APP_WEB_URL: http://localhost:3001
       FILES_URL: http://dify-api:5001
       # ── Celery (background tasks for ingestion pipelines) ─────────────────
       CELERY_BROKER_URL: redis://redis:6379/1
@@ -108,6 +114,8 @@ services:
         condition: service_healthy
       minio-dify-init:
         condition: service_completed_successfully
+      dify-plugin-daemon:
+        condition: service_started
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5001/health || exit 1"]
       interval: 15s
@@ -145,6 +153,7 @@ services:
       PGVECTOR_PASSWORD: dify
       PGVECTOR_DATABASE: dify
       SECRET_KEY: REPLACE_ME_DEV_ONLY_dify_secret_key_32chars_min
+      MARKETPLACE_ENABLED: "false"
       CELERY_BROKER_URL: redis://redis:6379/1
       LLM_PROVIDER: ""
     volumes:
@@ -165,6 +174,8 @@ services:
     container_name: mara-dify-web
     restart: unless-stopped
     environment:
+      # The browser loads this web app from http://localhost:3001, so these
+      # URLs must be reachable from the host machine (not the Docker network).
       CONSOLE_API_URL: http://localhost:5001
       APP_API_URL: http://localhost:5001
     ports:
@@ -196,6 +207,44 @@ services:
       echo 'dify-knowledge bucket ready'
       "
     restart: "no"
+
+  # ── Dify Plugin Daemon (v1.0+) ───────────────────────────────────────────
+  # Manages model providers, plugins, and plugin tasks.
+  dify-plugin-daemon:
+    image: langgenius/dify-plugin-daemon:0.6.5-local
+    container_name: mara-dify-plugin-daemon
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: 5002
+      SERVER_KEY: plugin-api-key
+      DIFY_INNER_API_URL: http://dify-api:5001
+      DIFY_INNER_API_KEY: inner-api-key
+      PLUGIN_REMOTE_INSTALLING_HOST: 0.0.0.0
+      PLUGIN_REMOTE_INSTALLING_PORT: 5003
+      PLUGIN_WORKING_PATH: /app/storage/plugins
+      DB_HOST: postgres-dify
+      DB_PORT: 5432
+      DB_USERNAME: dify
+      DB_PASSWORD: dify
+      DB_DATABASE: dify
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 1
+      STORAGE_TYPE: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET_NAME: dify-knowledge
+      S3_ACCESS_KEY: mara-dev
+      S3_SECRET_KEY: mara-dev-secret
+      S3_REGION: us-east-1
+    ports:
+      - "5002:5002"
+    depends_on:
+      postgres-dify:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
 
 volumes:
   mara_dify_storage:

@@ -41,6 +41,7 @@ from services.audit_service import (
     audit_pool,
     write_audit_event,
 )
+from services.knowledge_service import DifyAdapter
 from services.memory_service import calibration_pool, write_calibration_event
 from shared.config import Settings
 from shared.workflow_engine import postgres_checkpointer
@@ -100,8 +101,8 @@ async def build_real_calibration_writer(
 ) -> AsyncIterator[CalibrationWriter]:
     """The real Long-term Memory calibration write path
     (services/memory_service, against ``long_term_memory_calibration`` —
-    **not yet created**; see infrastructure/AGENTS.md item 8). Same
-    composition-root reasoning as the two functions above.
+    defined in infrastructure/compose/init/postgres-primary-init.sql).
+    Same composition-root reasoning as the two functions above.
     """
 
     async with calibration_pool(settings) as pool:
@@ -111,3 +112,32 @@ async def build_real_calibration_writer(
                 await write_calibration_event(pool, event)
 
         yield _write
+
+
+@asynccontextmanager
+async def build_real_knowledge_backend(
+    settings: Settings,
+) -> AsyncIterator[DifyAdapter]:
+    """Construct a ``DifyAdapter`` from the process-wide settings.
+
+    The adapter is a context manager around an ``httpx.AsyncClient`` —
+    this function ensures the client is closed when the Gateway shuts
+    down rather than left dangling.
+
+    Configuration comes from ``settings.dify`` (``MARA_DIFY__*`` env vars
+    or ``configs/dev/settings.toml`` — see ``shared/config/settings.py``
+    ``DifySettings`` for the full list). In development, api_url defaults
+    to ``http://localhost:5001/v1``; inside the Docker network it should
+    be ``http://dify-api:5001/v1``.
+
+    Dify must be an **internal-only** service — never configure api_url
+    to point at an external URL (docs/architecture/11-security-architecture.md
+    §11.7).
+    """
+
+    async with DifyAdapter(
+        api_url=settings.dify.api_url,
+        api_key=settings.dify.api_key.get_secret_value(),
+        dataset_id=settings.dify.dataset_id,
+    ) as adapter:
+        yield adapter
