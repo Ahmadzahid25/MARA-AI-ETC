@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:
-      - ./init/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+      - ./infrastructure/compose/init/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     ports:
       - "4317:4317" # OTLP gRPC — matches configs/dev/settings.toml observability.otel_exporter_endpoint
       - "4318:4318" # OTLP HTTP
@@ -37,7 +37,7 @@ services:
     container_name: mara-prometheus
     restart: unless-stopped
     volumes:
-      - ./init/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infrastructure/compose/init/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - mara_prometheus_data:/prometheus
     ports:
       - "9090:9090"
@@ -60,10 +60,10 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin-dev-only
       GF_AUTH_ANONYMOUS_ENABLED: "false"
     ports:
-      - "3000:3000"
+      - "3002:3000"     # host port 3002 to avoid clash with openhands-app on 3000
     volumes:
       - mara_grafana_data:/var/lib/grafana
-      - ./init/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
+      - ./infrastructure/compose/init/grafana-datasources.yaml:/etc/grafana/provisioning/datasources/datasources.yaml:ro
     depends_on:
       - prometheus
       - loki
