@@ -17,15 +17,16 @@ export function DashboardPage() {
   );
 
   return (
-    <AppLayout title="Dashboard" subtitle="Portfolio overview">
+    <AppLayout title="Portfolio Overview" subtitle="Pemantauan permohonan pembiayaan & geran usahawan MARA">
       <div className="space-y-6">
-        <div className="grid grid-cols-5 gap-4">
+        {/* Stat cards grid: 2 cols on mobile -> 3 on tablet -> 5 on desktop */}
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
           <StatCard
             label="Total Workflows"
             value={MOCK_DASHBOARD_STATS.total_workflows}
           />
           <StatCard
-            label="Active"
+            label="Active Workflows"
             value={MOCK_DASHBOARD_STATS.active_workflows}
             variant="warning"
           />
@@ -35,7 +36,7 @@ export function DashboardPage() {
             variant="warning"
           />
           <StatCard
-            label="Blocked"
+            label="Blocked Workflows"
             value={MOCK_DASHBOARD_STATS.blocked_workflows}
             variant="danger"
           />
@@ -46,7 +47,8 @@ export function DashboardPage() {
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
+        {/* 2-column grid on desktop, 1-column on mobile */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <WorkflowList workflows={activeWorkflows} />
           <PendingSummary
             approvals={MOCK_PENDING_APPROVALS}
@@ -59,3 +61,4 @@ export function DashboardPage() {
     </AppLayout>
   );
 }
+

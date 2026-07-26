@@ -4,14 +4,14 @@ import { MOCK_TASKS } from '../../mocks/mock-data';
 
 const STATUS_CONFIG: Record<
   TaskStatus,
-  { label: string; color: 'green' | 'primaryDark' | 'gray' | 'red' | 'aqua' }
+  { label: string; color: 'green' | 'primaryDark' | 'gray' | 'red' | 'aqua'; bg: string }
 > = {
-  pending: { label: 'Pending', color: 'gray' },
-  in_progress: { label: 'In Progress', color: 'aqua' },
-  completed: { label: 'Completed', color: 'green' },
-  awaiting_approval: { label: 'Awaiting Approval', color: 'primaryDark' },
-  blocked: { label: 'Blocked', color: 'red' },
-  failed: { label: 'Failed', color: 'red' },
+  pending: { label: 'Pending', color: 'gray', bg: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700/60' },
+  in_progress: { label: 'In Progress', color: 'aqua', bg: 'bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/80 dark:text-cyan-300 dark:border-cyan-800/60' },
+  completed: { label: 'Completed', color: 'green', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800/60' },
+  awaiting_approval: { label: 'Awaiting Approval', color: 'primaryDark', bg: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800/60' },
+  blocked: { label: 'Blocked', color: 'red', bg: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800/60' },
+  failed: { label: 'Failed', color: 'red', bg: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800/60' },
 };
 
 export function TaskPanel() {
@@ -23,15 +23,20 @@ export function TaskPanel() {
   ).length;
 
   return (
-    <aside className="flex w-72 flex-col border-r bg-white">
-      <div className="border-b px-4 py-3">
-        <Typography.H5>Tasks</Typography.H5>
-        <div className="mt-2 flex gap-2">
-          <Chip color="aqua" variant="pill">
+    <aside className="flex w-72 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-[#222328] dark:bg-[#131417]">
+      <div className="border-b border-slate-100 bg-slate-50/50 dark:border-[#222328] dark:bg-[#18191C]/50 px-4 py-3.5">
+        <div className="flex items-center justify-between">
+          <Typography.H5 className="font-bold text-slate-900 dark:text-white">Tasks</Typography.H5>
+          <span className="rounded-full bg-slate-200/60 dark:bg-[#222328] px-2 py-0.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+            {MOCK_TASKS.length}
+          </span>
+        </div>
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          <Chip color="aqua" variant="pill" className="border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-800/60 dark:bg-cyan-950/80 text-xs font-semibold dark:text-cyan-300">
             {pendingCount} active
           </Chip>
           {awaitingCount > 0 && (
-            <Chip color="primaryDark" variant="pill">
+            <Chip color="primaryDark" variant="pill" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/80 text-xs font-semibold dark:text-amber-300">
               {awaitingCount} awaiting
             </Chip>
           )}
@@ -39,7 +44,7 @@ export function TaskPanel() {
       </div>
 
       <Scrollable className="flex-1">
-        <div className="space-y-1 p-2">
+        <div className="space-y-1.5 p-2.5">
           {MOCK_TASKS.map((task) => (
             <TaskItem key={task.id} task={task} />
           ))}
@@ -53,26 +58,28 @@ function TaskItem({ task }: { task: Task }) {
   const config = STATUS_CONFIG[task.status];
 
   return (
-    <div className="cursor-pointer rounded-md px-3 py-2 transition-colors hover:bg-gray-50">
-      <div className="flex items-start justify-between gap-2">
-        <Typography.Text fontSize="s" fontWeight={500}>
-          {task.title}
-        </Typography.Text>
-        <Chip color={config.color} variant="pill">
+    <div className="cursor-pointer rounded-xl border border-transparent p-3 transition-all hover:border-slate-200 hover:bg-slate-50 hover:shadow-sm dark:hover:border-[#2C2E34] dark:hover:bg-[#18191C] dark:hover:shadow-lg">
+      <div className="mb-2 flex items-center justify-between gap-1">
+        <Chip color={config.color} variant="pill" className={`shrink-0 px-2 py-0.5 text-[11px] font-semibold ${config.bg}`}>
           {config.label}
         </Chip>
-      </div>
-      <div className="mt-1 flex items-center gap-2">
-        <Typography.Text fontSize="xxs" className="text-gray-400">
-          {task.agent_name}
-        </Typography.Text>
-        <Typography.Text fontSize="xxs" className="text-gray-300">
+        <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
           {new Date(task.updated_at).toLocaleTimeString('en-MY', {
             hour: '2-digit',
             minute: '2-digit',
           })}
-        </Typography.Text>
+        </span>
+      </div>
+      <Typography.Text fontSize="s" className="block font-semibold leading-snug text-slate-800 dark:text-slate-200 line-clamp-2">
+        {task.title}
+      </Typography.Text>
+      <div className="mt-2 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+        <span className="flex items-center gap-1.5 truncate">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500"></span>
+          <span className="truncate font-medium">{task.agent_name}</span>
+        </span>
       </div>
     </div>
   );
 }
+

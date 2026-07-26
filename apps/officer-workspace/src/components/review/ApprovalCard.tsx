@@ -41,28 +41,28 @@ export function ApprovalCard({
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-      <div className="border-b px-6 py-4">
+    <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-[#222328] dark:bg-[#131417]">
+      <div className="border-b border-gray-100 dark:border-[#222328] px-6 py-4">
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-2">
-              <Typography.H4>{request.agent_name}</Typography.H4>
+              <Typography.H4 className="text-slate-900 dark:text-white">{request.agent_name}</Typography.H4>
               <Chip color="primaryDark" variant="corner">
                 {request.status}
               </Chip>
             </div>
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
               Workflow: {request.workflow_thread_id} &middot; Document:{' '}
               {request.document_id}
             </p>
           </div>
-          <Typography.Text fontSize="xs" className="text-gray-400">
+          <Typography.Text fontSize="xs" className="text-gray-400 dark:text-slate-500">
             {new Date(request.created_at).toLocaleString('en-MY')}
           </Typography.Text>
         </div>
 
-        <div className="mt-3 rounded-md bg-blue-50 p-3">
-          <Typography.Text fontSize="s" fontWeight={500}>
+        <div className="mt-3 rounded-md bg-blue-50 p-3 dark:bg-indigo-950/50 dark:border dark:border-indigo-800/60">
+          <Typography.Text fontSize="s" fontWeight={500} className="text-slate-900 dark:text-indigo-200">
             {request.question}
           </Typography.Text>
         </div>
@@ -78,7 +78,7 @@ export function ApprovalCard({
       </div>
 
       <div className="px-6 py-4">
-        <Typography.H5>Extracted Fields</Typography.H5>
+        <Typography.H5 className="text-slate-900 dark:text-white">Extracted Fields</Typography.H5>
         <div className="mt-3 space-y-3">
           {fields.map((field) => (
             <FieldPreview key={field.name} field={field} />
