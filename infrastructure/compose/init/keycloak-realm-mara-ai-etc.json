@@ -6,6 +6,9 @@
   "registrationAllowed": false,
   "resetPasswordAllowed": true,
   "bruteForceProtected": true,
+  "loginTheme": "keycloak",
+  "accessTokenLifespan": 300,
+  "ssoSessionMaxLifespan": 36000,
   "roles": {
     "realm": [
       { "name": "entrepreneurship_officer", "description": "Day-to-day case owner; can initiate and approve within assigned branch/state (ABAC-scoped)." },
@@ -29,10 +32,19 @@
       "standardFlowEnabled": true,
       "directAccessGrantsEnabled": false,
       "implicitFlowEnabled": false,
-      "redirectUris": ["http://localhost:4000/*"],
-      "webOrigins": ["http://localhost:4000"],
+      "redirectUris": [
+        "http://localhost:4000/*",
+        "http://localhost:3000/*",
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:4000",
+        "http://localhost:3000",
+        "http://localhost:5173"
+      ],
       "attributes": {
-        "pkce.code.challenge.method": "S256"
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:4000/login"
       }
     },
     {
@@ -45,7 +57,69 @@
       "standardFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": true,
-      "secret": "REPLACE_ME_DEV_ONLY"
+      "secret": "mara-api-gw-dev-secret-2026"
+    }
+  ],
+  "users": [
+    {
+      "username": "pegawai.usahawan",
+      "email": "pegawai.usahawan@mara.gov.my",
+      "firstName": "Ahmad",
+      "lastName": "Zahid",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Password123!", "temporary": false }],
+      "realmRoles": ["entrepreneurship_officer"]
+    },
+    {
+      "username": "pegawai.pematuhan",
+      "email": "pegawai.pematuhan@mara.gov.my",
+      "firstName": "Siti",
+      "lastName": "Aminah",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Password123!", "temporary": false }],
+      "realmRoles": ["compliance_officer"]
+    },
+    {
+      "username": "pegawai.kewangan",
+      "email": "pegawai.kewangan@mara.gov.my",
+      "firstName": "Mohd",
+      "lastName": "Faris",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Password123!", "temporary": false }],
+      "realmRoles": ["finance_officer"]
+    },
+    {
+      "username": "pengurus.cawangan",
+      "email": "pengurus.cawangan@mara.gov.my",
+      "firstName": "Razif",
+      "lastName": "Hassan",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Password123!", "temporary": false }],
+      "realmRoles": ["branch_manager"]
+    },
+    {
+      "username": "juruaudit",
+      "email": "juruaudit@mara.gov.my",
+      "firstName": "Nurul",
+      "lastName": "Ain",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Password123!", "temporary": false }],
+      "realmRoles": ["auditor"]
+    },
+    {
+      "username": "admin.mara",
+      "email": "admin@mara.gov.my",
+      "firstName": "Admin",
+      "lastName": "MARA",
+      "enabled": true,
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "Admin@2026!", "temporary": false }],
+      "realmRoles": ["administrator", "auditor"]
     }
   ],
   "requiredActions": [
@@ -53,6 +127,22 @@
       "alias": "CONFIGURE_TOTP",
       "name": "Configure OTP",
       "providerId": "CONFIGURE_TOTP",
+      "enabled": true,
+      "defaultAction": false,
+      "config": {}
+    },
+    {
+      "alias": "UPDATE_PASSWORD",
+      "name": "Update Password",
+      "providerId": "UPDATE_PASSWORD",
+      "enabled": true,
+      "defaultAction": false,
+      "config": {}
+    },
+    {
+      "alias": "VERIFY_EMAIL",
+      "name": "Verify Email",
+      "providerId": "VERIFY_EMAIL",
       "enabled": true,
       "defaultAction": false,
       "config": {}
