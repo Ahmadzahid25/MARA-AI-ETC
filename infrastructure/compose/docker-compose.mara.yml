@@ -117,15 +117,21 @@ services:
       # NOT postgres-primary or postgres-dify above (see docs/architecture/
       # 04-technology-stack.md §4.4 — Keycloak is reused directly, but as its
       # own service with its own datastore, same isolation principle as Dify).
+      KC_HEALTH_ENABLED: "true"   # exposes /health/ready used by healthcheck below
+      KC_LOG_LEVEL: INFO
     ports:
       - "8080:8080"
     volumes:
       - ./init/keycloak-realm-mara-ai-etc.json:/opt/keycloak/data/import/realm.json:ro
     healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      # Keycloak 26 UBI-minimal has neither curl nor wget.
+      # Use bash /dev/tcp to verify the management port (9000) is accepting
+      # connections — KC_HEALTH_ENABLED=true exposes it.
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/9000' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 60s
 
 volumes:
   mara_postgres_primary_data:
