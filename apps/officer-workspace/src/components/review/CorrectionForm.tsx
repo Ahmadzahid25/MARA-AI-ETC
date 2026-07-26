@@ -54,9 +54,9 @@ export function CorrectionForm({
   }
 
   return (
-    <div className="space-y-4 rounded-md border border-amber-200 bg-amber-50 p-4">
-      <Typography.H5>Correct Fields</Typography.H5>
-      <Typography.Text fontSize="xs" className="text-gray-500">
+    <div className="space-y-4 rounded-md border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/60 dark:bg-amber-950/40">
+      <Typography.H5 className="text-slate-900 dark:text-white">Correct Fields</Typography.H5>
+      <Typography.Text fontSize="xs" className="text-gray-500 dark:text-slate-400">
         Edit the fields that need correction. The original agent output is
         preserved separately — your corrections are stored as a distinct,
         attributed record.

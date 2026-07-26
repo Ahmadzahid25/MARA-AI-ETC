@@ -7,46 +7,84 @@ interface AgentMetricsProps {
 
 export function AgentMetrics({ metrics }: AgentMetricsProps) {
   return (
-    <div className="rounded-lg border bg-white shadow-sm">
-      <div className="border-b px-4 py-3">
-        <Typography.Text fontWeight={600} fontSize="m">
+    <div className="rounded-2xl border border-slate-200 bg-white dark:border-[#222328] dark:bg-[#131417] p-5 shadow-xs">
+      <div className="mb-3">
+        <Typography.Text fontWeight={600} fontSize="m" className="text-slate-800 dark:text-white">
           Agent Performance
         </Typography.Text>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+
+      {/* Mobile Card View (visible on screens < md) */}
+      <div className="divide-y divide-slate-100 dark:divide-[#222328] md:hidden">
+        {metrics.map((m) => (
+          <div key={m.agent_name} className="py-3.5 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-slate-800 dark:text-slate-200">{m.agent_name}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                  m.avg_confidence >= 0.85
+                    ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-400'
+                    : m.avg_confidence >= 0.6
+                      ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/80 dark:text-amber-400'
+                      : 'bg-rose-50 text-rose-600 dark:bg-rose-950/80 dark:text-rose-400'
+                }`}
+              >
+                {(m.avg_confidence * 100).toFixed(0)}% Conf
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 rounded-lg bg-slate-50 dark:bg-[#18191C] p-2.5 text-xs">
+              <div>
+                <p className="text-slate-400 dark:text-slate-500 font-medium">Diproses</p>
+                <p className="mt-0.5 font-semibold text-slate-700 dark:text-slate-300">{m.workflows_processed}</p>
+              </div>
+              <div>
+                <p className="text-slate-400 dark:text-slate-500 font-medium">Latensi</p>
+                <p className="mt-0.5 font-semibold text-slate-700 dark:text-slate-300">{m.avg_latency_seconds.toFixed(1)}s</p>
+              </div>
+              <div>
+                <p className="text-slate-400 dark:text-slate-500 font-medium">Kos</p>
+                <p className="mt-0.5 font-semibold text-slate-700 dark:text-slate-300">${m.total_cost.toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop Table View (visible on screens >= md) */}
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[560px] text-left text-sm">
           <thead>
-            <tr className="border-b bg-gray-50 text-xs uppercase text-gray-500">
-              <th className="px-4 py-2 font-medium">Agent</th>
-              <th className="px-4 py-2 font-medium">Workflows</th>
-              <th className="px-4 py-2 font-medium">Avg Latency</th>
-              <th className="px-4 py-2 font-medium">Total Cost</th>
-              <th className="px-4 py-2 font-medium">Avg Confidence</th>
+            <tr className="border-b border-slate-100 dark:border-[#222328] text-xs text-slate-400 dark:text-slate-500">
+              <th className="pb-2.5 font-medium">Ejen</th>
+              <th className="pb-2.5 font-medium">Diproses</th>
+              <th className="pb-2.5 font-medium">Latensi</th>
+              <th className="pb-2.5 font-medium">Kos</th>
+              <th className="pb-2.5 font-medium">Keyakinan</th>
             </tr>
           </thead>
-          <tbody className="divide-y">
+          <tbody className="divide-y divide-slate-50 dark:divide-[#18191C]">
             {metrics.map((m) => (
-              <tr key={m.agent_name} className="hover:bg-gray-50">
-                <td className="px-4 py-2.5 font-medium text-gray-900">
+              <tr key={m.agent_name} className="transition-colors hover:bg-slate-50/50 dark:hover:bg-[#18191C]/50">
+                <td className="py-3 font-medium text-slate-800 dark:text-slate-200">
                   {m.agent_name}
                 </td>
-                <td className="px-4 py-2.5 text-gray-600">
+                <td className="py-3 text-slate-600 dark:text-slate-400">
                   {m.workflows_processed}
                 </td>
-                <td className="px-4 py-2.5 text-gray-600">
+                <td className="py-3 text-slate-600 dark:text-slate-400">
                   {m.avg_latency_seconds.toFixed(1)}s
                 </td>
-                <td className="px-4 py-2.5 text-gray-600">
+                <td className="py-3 text-slate-600 dark:text-slate-400">
                   ${m.total_cost.toFixed(2)}
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="py-3">
                   <span
-                    className={`font-medium ${
+                    className={`font-semibold ${
                       m.avg_confidence >= 0.85
-                        ? 'text-green-600'
+                        ? 'text-emerald-600 dark:text-emerald-400'
                         : m.avg_confidence >= 0.6
-                          ? 'text-amber-600'
-                          : 'text-red-600'
+                          ? 'text-amber-600 dark:text-amber-400'
+                          : 'text-rose-600 dark:text-rose-400'
                     }`}
                   >
                     {(m.avg_confidence * 100).toFixed(0)}%
@@ -60,3 +98,4 @@ export function AgentMetrics({ metrics }: AgentMetricsProps) {
     </div>
   );
 }
+
