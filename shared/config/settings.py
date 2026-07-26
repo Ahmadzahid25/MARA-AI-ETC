@@ -82,6 +82,44 @@ class AuthSettings(BaseSettings):
     )
 
 
+class DifySettings(BaseSettings):
+    """Dify knowledge-engine connection.
+
+    Dify is an **internal-only** service — api_url must point at
+    ``http://dify-api:5001/v1`` inside the Docker/K8s network, or
+    ``http://localhost:5001/v1`` for local dev. Never set this to an
+    external / internet URL (docs/architecture/11-security-architecture.md
+    §11.7 — Dify has no outbound egress in this deployment).
+
+    api_key and dataset_id are obtained from the Dify admin UI after the
+    knowledge base is created and the API key is issued.
+
+    Set via environment variables:
+        MARA_DIFY__API_URL=http://localhost:5001/v1
+        MARA_DIFY__API_KEY=<dataset-api-key>
+        MARA_DIFY__DATASET_ID=<dataset-id>
+
+    Or via configs/dev/settings.toml:
+        [dify]
+        api_url = "http://localhost:5001/v1"
+        api_key  = "REPLACE_ME_DEV_ONLY"
+        dataset_id = "REPLACE_ME_DEV_ONLY"
+    """
+
+    api_url: str = Field(
+        default='http://localhost:5001/v1',
+        description='Dify API base URL — must be internal-only.',
+    )
+    api_key: SecretStr = Field(
+        default=SecretStr('REPLACE_ME_DEV_ONLY'),
+        description='Dify dataset API key from the Dify admin console.',
+    )
+    dataset_id: str = Field(
+        default='REPLACE_ME_DEV_ONLY',
+        description='Dify dataset (knowledge base) ID from the Dify admin console.',
+    )
+
+
 class ObservabilitySettings(BaseSettings):
     otel_exporter_endpoint: str | None = Field(default='http://localhost:4317')
     langfuse_public_key: SecretStr | None = Field(default=None)
@@ -107,6 +145,7 @@ class Settings(BaseSettings):
     object_storage: ObjectStorageSettings = Field(default_factory=ObjectStorageSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)
     auth: AuthSettings = Field(default_factory=AuthSettings)
+    dify: DifySettings = Field(default_factory=DifySettings)
     observability: ObservabilitySettings = Field(default_factory=ObservabilitySettings)
 
     gateway_correlation_header: str = Field(default='X-MARA-Correlation-Id')
