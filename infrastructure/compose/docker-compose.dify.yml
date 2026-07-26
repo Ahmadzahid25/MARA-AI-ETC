@@ -84,10 +84,9 @@ services:
       # ── Marketplace / Plugins — point to internal plugin daemon service ────
       PLUGIN_DAEMON_URL: http://dify-plugin-daemon:5002
       PLUGIN_DAEMON_KEY: plugin-api-key
-      # ── CORS — allow the local dev web UI (host port 3001) to call this API
-      # Without this, the browser blocks preflight requests from :3001 → :5001.
-      CONSOLE_CORS_ALLOW_ORIGINS: "http://localhost:3001,http://localhost:5001"
-      WEB_API_CORS_ALLOW_ORIGINS: "http://localhost:3001,http://localhost:5001"
+      # ── CORS — allow all local dev origins (* in dev)
+      CONSOLE_CORS_ALLOW_ORIGINS: "*"
+      WEB_API_CORS_ALLOW_ORIGINS: "*"
       # ── Internal service config ───────────────────────────────────────────
       CONSOLE_WEB_URL: http://localhost:3001
       SERVICE_API_URL: http://dify-api:5001
