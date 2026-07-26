@@ -77,6 +77,13 @@ class ToolInvocationLog(BaseModel):
     latency_ms: float = Field(ge=0.0)
     outcome: ToolOutcome
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    metadata: dict[str, object] = Field(
+        default_factory=dict,
+        description='Tool-specific extra logging detail beyond the common '
+        'fields above — e.g. tools/search logs the sanitized query text and '
+        'domains hit per §5.7/§6.2, which no other tool needs. Empty for '
+        'every tool that has nothing extra to add.',
+    )
 
 
 AuditSink = Callable[[ToolInvocationLog], None]

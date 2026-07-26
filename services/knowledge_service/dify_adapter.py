@@ -40,7 +40,7 @@ for how Dify is deployed; infrastructure/AGENTS.md for wiring guidance.
 from __future__ import annotations
 
 import logging
-from datetime import date, timezone
+from datetime import date
 from typing import Any
 
 import httpx

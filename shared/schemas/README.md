@@ -9,7 +9,14 @@ the common tool-error/audit-log types shared by every tool. Leaf module per
 
 | File | Purpose |
 |---|---|
-| `documents.py` | `DocumentExtractionRecord`, `ExtractedField`, `Citation`, `BoundingBox`, `DocumentClassification`, `ExtractionSource` — the contract between the Document Agent (not yet built) and the Review & Approval Console (`apps/officer-workspace/`, see its own `AGENTS.md`) |
+| `documents.py` | `DocumentExtractionRecord`, `ExtractedField`, `Citation`, `BoundingBox`, `DocumentClassification`, `ExtractionSource` — the contract between the Document Agent and the Review & Approval Console (`apps/officer-workspace/`, see its own `AGENTS.md`) |
+| `compliance.py` | `ComplianceChecklist`, `ComplianceChecklistItem`, `ComplianceStatus` — the Compliance Agent's output contract |
+| `knowledge.py` | `RetrievalQuery`, `RetrievalFilters`, `RetrievalResult`, `RetrievedChunk`, `PolicyCitation`, `DocumentKind`, `SensitivityClass` — the Knowledge Memory retrieval contract between `services/knowledge_service`'s `KnowledgeBackend` protocol and `tools/rag` (Milestone 2) |
+| `finance.py` | `FinancialAnalysis`, `FinancialFigure`, `FigureProvenance` — the Finance Agent's output contract; every figure is schema-enforced as either `EXTRACTED` (with a source citation) or `CALCULATED` (with a formula ID/version), never neither (Milestone 3) |
+| `market.py` | `MarketBrief`, `MarketClaim` — the Market Agent's output contract; every claim carries its source URL and retrieval date directly (Milestone 3) |
+| `risk.py` | `RiskRating`, `RiskStatus` — the Risk Agent's output contract, including the incomplete/escalated states §5.6 requires (Milestone 3) |
+| `planning.py` | `PlanResult`, `WorkflowTemplate` — the Planner's output contract; `PlanResult.is_escalated` is `True` exactly when `template_name` is `None` (Milestone 4) |
+| `recommendation.py` | `RecommendationOutput`, `RecommendationDecision` — the Recommendation Agent's output contract; `decision` and `withheld_reason` are schema-enforced as mutually exclusive (Milestone 4) |
 | `tooling.py` | `ToolError` taxonomy (`ToolInputError`, `ToolTimeoutError`, `ToolExternalServiceError`, `ToolPermissionError`) and `ToolInvocationLog`/`log_tool_invocation()` — the audit-log shape every tool call writes, per [06-tool-architecture.md §6.1](../../docs/architecture/06-tool-architecture.md) |
 
 `log_tool_invocation()`'s default sink is structured logging, not a real

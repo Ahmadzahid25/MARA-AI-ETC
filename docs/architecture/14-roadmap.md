@@ -44,6 +44,26 @@ Each milestone ships something an officer can actually use, per [01-vision.md](0
 | Acceptance criteria | Compliance checklist citations are independently verifiable by a Compliance Officer against the source policy; a superseded-policy staleness check correctly flags an outdated citation in a test scenario |
 | Complexity | Medium-High |
 
+> **Implementation status:** `services/knowledge_service/contract.py`'s
+> `KnowledgeBackend` protocol, `tools/rag`, `agents/compliance_agent/
+> policy_lookup.py`, and `shared/provenance`'s citation-fabrication
+> verification are built and unit-tested against stub backends. Dify is
+> deployed at the infrastructure level (`infrastructure/compose/
+> docker-compose.dify.yml`, on its own `postgres-dify` instance per ACCB
+> Condition C-5), and a real `KnowledgeBackend` adapter now exists
+> (`services/knowledge_service/dify_adapter.py`, calling Dify's dataset
+> retrieval API and mapping its records into `RetrievedChunk`) — not yet
+> run against a live Dify instance with real ingested content, only unit-
+> tested. Still open: a real embedding model (Dify's own choice once a
+> real dataset is configured), and a real MARA policy corpus to ingest and
+> verify citations against. This milestone's acceptance criteria — cited
+> policy checks verified by a Compliance Officer against real source
+> documents, and the
+> superseded-policy staleness check (`RetrievedChunk.is_stale_as_of()` /
+> `PolicyCitation.is_stale_as_of()` are implemented and unit-tested; not yet
+> exercised against a real, versioned corpus) — cannot fully close until
+> those exist.
+
 ## 14.5 Milestone 3 — Financial and risk reasoning core
 
 | | |
@@ -56,6 +76,30 @@ Each milestone ships something an officer can actually use, per [01-vision.md](0
 | Acceptance criteria | Financial figures reconcile with manual verification; risk rating correctly reflects a documented conflicting-input test case (e.g., strong financials + hard compliance flag) by escalating rather than auto-resolving; **AND** a red-team test confirms a query containing simulated applicant PII is sanitized or rejected before any outbound call, and a simulated low-quality cached market finding is correctly held in the low-trust tier rather than reaching Risk/Recommendation as approved knowledge |
 | Complexity | High |
 
+> **Implementation status:** `tools/calculations` (versioned formula
+> library — genuinely complete, no open vendor decision), `agents/finance_agent`,
+> `tools/search` (real query sanitization + domain allow-list; no real
+> search provider wired), `agents/market_agent`, and `agents/risk_agent`
+> (real incomplete/escalation handling, reuses `composite_risk_score`) are
+> built and unit-tested, all wired to the Milestone 2 Knowledge Service
+> boundary (`KnowledgeBackend`/`RetrievalQuery`) rather than an
+> ad hoc shape. §9.7's market-data low-trust tier is **not yet
+> implemented** — `shared/schemas/knowledge.py`'s `RetrievalFilters` has no
+> filter dimension for it yet, so the Market Agent currently only reads
+> already-approved corpus content, and there is no ingestion path at all
+> yet for writing a freshly-gathered brief back into Knowledge Memory
+> (`KnowledgeBackend` is read-only). **Not yet true, and explicitly called
+> out as launch preconditions by §6.6, not follow-on hardening:** a real
+> search provider, free-text PII/name detection in the query sanitizer, and
+> — the other mandatory control — Kubernetes network-policy egress
+> enforcement restricting the Market Agent's pod specifically
+> (`infrastructure/AGENTS.md`'s Market Agent egress item;
+> `infrastructure/k8s/` is still a README stub). This milestone's
+> acceptance criteria — including the red-team query-sanitization test and
+> the low-trust-tier market-data check — cannot be closed until the network
+> policy exists, the low-trust tier is implemented, and a real security
+> review has run.
+
 ## 14.6 Milestone 4 — Full Loan Assessment workflow
 
 | | |
@@ -67,6 +111,27 @@ Each milestone ships something an officer can actually use, per [01-vision.md](0
 | Risks | This is the highest-integration-complexity milestone — workflow-template dependency ordering (Phase 7) bugs are likeliest here (R-T2); officer trust/adoption risk becomes measurable for the first time (R-B1) |
 | Acceptance criteria | End-to-end Loan Assessment completes with every [01-vision.md](01-vision.md) success criterion met on a pilot batch of real (or realistic de-identified) applications; workflow correctly resumes after a deliberate mid-approval restart drill |
 | Complexity | High |
+
+> **Implementation status:** `agents/planner`, `services/supervisor_service`,
+> `agents/recommendation_agent`, `services/publishing_service` (real
+> `python-docx`/`python-pptx` rendering), and
+> `workflows/loan_assessment` (the full Document → {Compliance, Finance,
+> Market} → Risk → Recommendation → Publishing graph, five real approval
+> gates plus a conditional sixth) are built and unit-tested against a real
+> LangGraph execution (`InMemorySaver`) — including the parallel fan-out/
+> fan-in, which surfaced and fixed a real bug (a hop-depth mismatch across
+> branches double-firing the join; see `workflows/loan_assessment/
+> README.md`). **Not yet true:** Planner is not wired to actually dispatch
+> a selected template (a Gateway/`services/supervisor_service` integration
+> task); `supervisor_service`'s retry/circuit-breaker policy is not called
+> from the workflow's own node boundaries yet; citation verification
+> (`ProvenanceLedger`) is not wired into the workflow for a structural
+> reason documented in its own README (agents are constructed once,
+> outside the graph, not per-task); and — unchanged from Milestones 0–3 —
+> none of this has run against a real `postgres-primary` checkpointer, only
+> `InMemorySaver`. This milestone's acceptance criteria — a real pilot
+> batch, and a restart drill against a real Postgres checkpointer — cannot
+> close until those exist.
 
 ## 14.7 Milestone 5 — Voice and audit completeness
 

@@ -17,6 +17,7 @@ from shared.schemas.documents import (
     ExtractedField,
     ExtractionSource,
 )
+from shared.schemas.finance import FigureProvenance, FinancialAnalysis, FinancialFigure
 from shared.schemas.knowledge import (
     DocumentKind,
     PolicyCitation,
@@ -26,6 +27,10 @@ from shared.schemas.knowledge import (
     RetrievedChunk,
     SensitivityClass,
 )
+from shared.schemas.market import MarketBrief, MarketClaim
+from shared.schemas.planning import PlanResult, WorkflowTemplate
+from shared.schemas.recommendation import RecommendationDecision, RecommendationOutput
+from shared.schemas.risk import RiskRating, RiskStatus
 from shared.schemas.tooling import (
     AuditSink,
     ToolError,
@@ -54,11 +59,21 @@ __all__ = [
     'ExtractedField',
     'ExtractionSource',
     'FieldCorrection',
+    'FigureProvenance',
+    'FinancialAnalysis',
+    'FinancialFigure',
+    'MarketBrief',
+    'MarketClaim',
+    'PlanResult',
     'PolicyCitation',
+    'RecommendationDecision',
+    'RecommendationOutput',
     'RetrievalFilters',
     'RetrievalQuery',
     'RetrievalResult',
     'RetrievedChunk',
+    'RiskRating',
+    'RiskStatus',
     'SensitivityClass',
     'ToolError',
     'ToolExternalServiceError',
@@ -67,5 +82,6 @@ __all__ = [
     'ToolOutcome',
     'ToolPermissionError',
     'ToolTimeoutError',
+    'WorkflowTemplate',
     'log_tool_invocation',
 ]

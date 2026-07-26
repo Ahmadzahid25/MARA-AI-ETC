@@ -238,6 +238,27 @@ Then verify, don't assume:
    using `services.memory_service.calibration.write_calibration_event`, not
    the full HTTP flow (same OCR-engine blocker applies).
 
+9. **New trust boundary needed: Market Agent network egress policy.**
+   `agents/market_agent/market_agent.py` and `tools/search/search_tool.py`
+   (new, Milestone 3, backend side) now exist for real — the platform's one
+   component with an actual outbound-search code path. Per
+   [`06-tool-architecture.md` §6.6](../docs/architecture/06-tool-architecture.md#66-query-sanitization-on-the-webexternal-search-tool-added-in-v10--accb-mandatory-change-1)
+   (ACCB Mandatory Change 1), both controls — query sanitization
+   (application-level) and network-policy-level egress enforcement
+   (infrastructure-level) — are launch preconditions for the Market Agent,
+   not a follow-on hardening pass. Query sanitization is implemented and
+   tested (`tools/search/query_sanitizer.py`); this network-policy half is
+   still open and is your side of it, same division of labor as the Dify
+   adapter above. Needs, once `infrastructure/k8s/` has real manifests
+   (currently a README stub): a `NetworkPolicy` scoped to the Market
+   Agent's pod selector denying all egress except DNS + the search
+   provider's allow-listed destinations — coordinate that allow-list with
+   `tools/search/search_tool.py`'s `allowed_domains` parameter (currently
+   caller-supplied at call time, not yet exposed as shared config; flag
+   back to the backend side if it should be). Every other agent/service
+   pod's egress stays cluster-internal-only, per the "Egress posture"
+   section above.
+
 **Report exactly what you verified vs. what you assumed.** A prior session
 on this project got burned repeatedly by "done" claims that turned out to
 be unrun or unverified — every status you report here should be something
