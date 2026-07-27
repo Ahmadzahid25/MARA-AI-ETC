@@ -1,7 +1,15 @@
-# MARA AI-ETC
+<p align="center">
+  <img src="docs/assets/mara-logo.png" alt="MARA AI Agentic System — Automate. Assist. Empower." width="340">
+</p>
 
-**MARA AI Entrepreneurship Transformation Centre**
-*From Documents to Decisions, From Insights to Impact.*
+<h1 align="center">MARA AI-ETC</h1>
+
+<p align="center">
+  <strong>MARA AI Entrepreneurship Transformation Centre</strong><br>
+  <em>From Documents to Decisions, From Insights to Impact.</em>
+</p>
+
+---
 
 An Agentic AI platform for MARA (Majlis Amanah Rakyat) entrepreneurship officers: it plans work, executes it through tools, gathers evidence, drafts outputs, and waits for human approval — with a complete audit trail. It is not a chatbot, and it does not make loan or grant decisions; human officers always do.
 
