@@ -4,6 +4,7 @@
  */
 
 import type { Citation } from './documents';
+import type { PolicyCitation, RetrievalResult } from './knowledge';
 
 export interface ExtractionPayload {
   document_id: string;
@@ -19,9 +20,11 @@ export interface ExtractionPayload {
 
 export interface CompliancePayload {
   document_id: string;
+  retrieval_result: RetrievalResult | null;
   items: Array<{
     requirement: string;
     status: 'pass' | 'fail' | 'exception' | 'no_policy_found';
+    policy_citation: PolicyCitation | null;
     notes?: string;
   }>;
 }
