@@ -19,3 +19,22 @@ export interface Task {
   updated_at: string;
   description?: string;
 }
+
+/**
+ * Live assessment tracked locally — there is no GET endpoint for
+ * assessment state; state is captured from POST responses and stored
+ * in AssessmentContext (+ sessionStorage for refresh survival).
+ */
+
+import type { PendingGate, StageLogEntry } from '../services/api';
+
+export interface LiveAssessment {
+  thread_id: string;
+  title: string;
+  status: 'pending_approval' | 'completed';
+  pending_gate: PendingGate | null;
+  pending_payload: Record<string, unknown> | null;
+  stage_log: StageLogEntry[];
+  acted_gate: PendingGate | null;
+  created_at: string;
+}
