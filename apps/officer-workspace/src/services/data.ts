@@ -17,44 +17,26 @@ import {
   type DecisionInput,
 } from './api';
 
-/**
- * MOCK FALLBACK — Dashboard API endpoints not yet built (Milestone 1+).
- *
- * Per AGENTS.md §"When something you need doesn't exist yet":
- * "build against a clearly-marked mock ... and say explicitly ... that
- * this is a mock pending the real contract."
- *
- * Replace each function with a real API call once the endpoint exists.
- */
-
-import {
-  MOCK_DASHBOARD_STATS,
-  MOCK_WORKFLOWS,
-  MOCK_AGENT_METRICS,
-  MOCK_RISK_FLAGS,
-  MOCK_PENDING_APPROVALS,
-} from '../mocks/dashboard-mock';
-
 // ─── Dashboard ────────────────────────────────────────────────
 
 export async function fetchDashboardStats(): Promise<DashboardStats> {
-  return MOCK_DASHBOARD_STATS;
+  throw new Error('API not implemented for dashboard stats');
 }
 
 export async function fetchWorkflows(): Promise<WorkflowInstance[]> {
-  return MOCK_WORKFLOWS;
+  throw new Error('API not implemented for workflows');
 }
 
 export async function fetchAgentMetrics(): Promise<AgentMetric[]> {
-  return MOCK_AGENT_METRICS;
+  throw new Error('API not implemented for agent metrics');
 }
 
 export async function fetchRiskFlags(): Promise<RiskFlag[]> {
-  return MOCK_RISK_FLAGS;
+  throw new Error('API not implemented for risk flags');
 }
 
 export async function fetchPendingApprovals(): Promise<PendingApprovalSummary[]> {
-  return MOCK_PENDING_APPROVALS;
+  throw new Error('API not implemented for pending approvals');
 }
 
 // ─── Workspace ─────────────────────────────────────────────────

@@ -18,11 +18,13 @@ export function ReviewConsolePage() {
   const [fields, setFields] = useState<ExtractedField[]>([]);
   const [loading, setLoading] = useState(true);
   const [gateError, setGateError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       setGateError(null);
+      setLoadError(null);
       try {
         const reqs = await fetchApprovalRequests();
         setRequests(reqs);
@@ -38,6 +40,8 @@ export function ReviewConsolePage() {
               ? `This stage requires a ${role} — your role does not have authority at this gate.`
               : err.detail ?? 'You do not have the required role for this gate.',
           );
+        } else {
+          setLoadError('Review Console data is unavailable. The API endpoint has not been built yet.');
         }
       } finally {
         setLoading(false);
@@ -99,10 +103,10 @@ export function ReviewConsolePage() {
 
   return (
     <AppLayout title="Review &amp; Approval Console" subtitle="Human-in-the-loop gates">
-      {gateError && (
+      {(gateError || loadError) && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/60 dark:bg-amber-950/40">
           <Typography.Text fontSize="s" className="text-amber-800 dark:text-amber-200">
-            {gateError}
+            {gateError ?? loadError}
           </Typography.Text>
         </div>
       )}
@@ -117,6 +121,12 @@ export function ReviewConsolePage() {
         <div className="py-12 text-center">
           <Typography.Text fontSize="m" className="text-gray-400">
             Loading approval requests...
+          </Typography.Text>
+        </div>
+      ) : loadError ? (
+        <div className="py-12 text-center">
+          <Typography.Text fontSize="m" className="text-gray-400">
+            {loadError}
           </Typography.Text>
         </div>
       ) : (
