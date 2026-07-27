@@ -6,6 +6,13 @@ export interface ChatMessage {
   content: string;
   timestamp: string;
   agent_name?: string;
+  audio_url?: string;
+  audio_duration?: number;
+}
+
+export interface DictationState {
+  isRecording: boolean;
+  transcript: string;
 }
 
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'awaiting_approval' | 'blocked' | 'failed';

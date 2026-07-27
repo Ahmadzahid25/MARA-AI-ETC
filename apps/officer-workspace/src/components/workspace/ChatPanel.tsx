@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from 'react';
 import { Icon, Scrollable, Typography } from '@openhands/ui';
 import type { ChatMessage } from '../../types/workspace';
+import { AudioMessage } from './AudioMessage';
 import { UI, WORKSPACE } from '../../constants';
 
 interface ChatPanelProps {
@@ -12,6 +13,16 @@ interface ChatPanelProps {
 export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [dictationSupported, setDictationSupported] = useState(true);
+
+  useEffect(() => {
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) {
+      setDictationSupported(false);
+    }
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,6 +64,45 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
     }
   }
 
+  function toggleRecording() {
+    const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI || !dictationSupported) return;
+
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognitionAPI();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'ms-MY';
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const results = event.results;
+      if (!results) return;
+      let transcript = '';
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        if (r?.[0]) transcript += r[0].transcript;
+      }
+      setInputValue((prev) => prev + transcript);
+    };
+
+    recognition.onerror = () => {
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
+  }
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex items-center border-b border-slate-200 bg-white/50 dark:border-[#222328] dark:bg-[#131417]/50 backdrop-blur-sm px-6 py-3.5 shadow-sm">
@@ -82,8 +132,14 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
               </button>
               <button
                 type="button"
-                title={WORKSPACE.VOICE_INPUT_TITLE}
-                className="w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all cursor-pointer shrink-0"
+                title={isRecording ? 'Stop recording' : WORKSPACE.VOICE_INPUT_TITLE}
+                onClick={toggleRecording}
+                disabled={!dictationSupported}
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                  isRecording
+                    ? 'text-red-500 bg-red-50 dark:bg-red-950/50 animate-pulse'
+                    : 'text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50'
+                } ${!dictationSupported ? 'opacity-30 cursor-not-allowed' : ''}`}
               >
                 <Icon icon="Mic" className="w-5 h-5" />
               </button>
@@ -132,12 +188,16 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             {message.agent_name}
           </p>
         )}
-        <Typography.Text
-          fontSize="s"
-          className={`whitespace-pre-wrap ${isUser ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}
-        >
-          {message.content}
-        </Typography.Text>
+        {message.audio_url ? (
+          <AudioMessage message={message} />
+        ) : (
+          <Typography.Text
+            fontSize="s"
+            className={`whitespace-pre-wrap ${isUser ? 'text-white' : 'text-slate-800 dark:text-slate-200'}`}
+          >
+            {message.content}
+          </Typography.Text>
+        )}
         <p
           className={`mt-1.5 text-xs ${
             isUser ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'
