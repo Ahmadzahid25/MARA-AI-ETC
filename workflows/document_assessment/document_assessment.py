@@ -52,6 +52,7 @@ from services.memory_service import (
     extraction_record_to_calibration_events,
 )
 from shared.llm.model_tiers import AgentName
+from shared.provenance import ProvenanceLedger
 from shared.schemas.compliance import ComplianceChecklist
 from shared.schemas.documents import DocumentExtractionRecord
 
@@ -165,8 +166,13 @@ def build_document_assessment_graph(
     async def _compliance_check_node(state: DocumentAssessmentState) -> dict:
         record = state['extraction_record']
         assert record is not None
+        # Fresh ledger per task — §6.1's citation verification checks the
+        # checklist against what this task's tool calls actually returned.
         checklist = await compliance_agent.check_compliance(
-            state['document_id'], record, state['compliance_requirements']
+            state['document_id'],
+            record,
+            state['compliance_requirements'],
+            ledger=ProvenanceLedger(),
         )
         return {
             'compliance_checklist': checklist,

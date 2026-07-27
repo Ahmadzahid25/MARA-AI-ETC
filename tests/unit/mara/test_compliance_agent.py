@@ -86,7 +86,7 @@ class TestComplianceAgentDefaultStub:
 class TestComplianceAgentWithInjectedLookupAndChecker:
     @pytest.mark.asyncio
     async def test_hard_violation_is_surfaced(self) -> None:
-        async def lookup(requirement: str) -> list[PolicyCitation]:
+        async def lookup(requirement: str, ledger=None) -> list[PolicyCitation]:
             return [POLICY_CLAUSE]
 
         async def checker(requirement, citations, record):
@@ -102,7 +102,7 @@ class TestComplianceAgentWithInjectedLookupAndChecker:
 
     @pytest.mark.asyncio
     async def test_pass_does_not_count_as_hard_violation(self) -> None:
-        async def lookup(requirement: str) -> list[PolicyCitation]:
+        async def lookup(requirement: str, ledger=None) -> list[PolicyCitation]:
             return [POLICY_CLAUSE]
 
         async def checker(requirement, citations, record):
@@ -117,7 +117,7 @@ class TestComplianceAgentWithInjectedLookupAndChecker:
 
     @pytest.mark.asyncio
     async def test_default_checker_calls_llm_with_compliance_tier(self) -> None:
-        async def lookup(requirement: str) -> list[PolicyCitation]:
+        async def lookup(requirement: str, ledger=None) -> list[PolicyCitation]:
             return [POLICY_CLAUSE]
 
         mock_response = MagicMock()

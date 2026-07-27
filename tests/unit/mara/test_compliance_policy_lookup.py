@@ -70,9 +70,9 @@ async def test_lookup_scopes_retrieval_to_currently_effective_policy() -> None:
     identically to the current one, so the filter is not optional."""
 
     backend = StubBackend(RetrievalResult(chunks=(CLAUSE,)))
-    lookup = make_rag_policy_lookup(backend, ledger=ProvenanceLedger())
+    lookup = make_rag_policy_lookup(backend)
 
-    await lookup('valid business registration')
+    await lookup('valid business registration', ProvenanceLedger())
 
     (query,) = backend.queries
     assert query.filters.document_kinds == frozenset({DocumentKind.POLICY})
@@ -84,7 +84,7 @@ async def test_checklist_cites_the_retrieved_clause_with_its_version() -> None:
     backend = StubBackend(RetrievalResult(chunks=(CLAUSE,)))
     ledger = ProvenanceLedger()
     agent = ComplianceAgent(
-        policy_lookup=make_rag_policy_lookup(backend, ledger=ledger),
+        policy_lookup=make_rag_policy_lookup(backend),
         checker=_passing_checker,
     )
 
@@ -108,7 +108,7 @@ async def test_no_confident_match_reports_no_policy_found() -> None:
     )
     ledger = ProvenanceLedger()
     agent = ComplianceAgent(
-        policy_lookup=make_rag_policy_lookup(backend, ledger=ledger),
+        policy_lookup=make_rag_policy_lookup(backend),
         checker=_passing_checker,
     )
 
@@ -129,10 +129,10 @@ async def test_a_fabricated_citation_is_rejected_before_the_checklist_returns() 
     backend = StubBackend(RetrievalResult(chunks=(CLAUSE,)))
     ledger = ProvenanceLedger()
 
-    async def _fabricating_lookup(requirement: str):
+    async def _fabricating_lookup(requirement: str, ledger=None):
         # Retrieval genuinely happens — so the ledger is populated — but the
         # citation attached to the finding names a different clause.
-        await make_rag_policy_lookup(backend, ledger=ledger)(requirement)
+        await make_rag_policy_lookup(backend)(requirement, ledger)
         return [PolicyCitation(document_id='policy-1', version='v3', locator='9.9')]
 
     agent = ComplianceAgent(policy_lookup=_fabricating_lookup, checker=_passing_checker)

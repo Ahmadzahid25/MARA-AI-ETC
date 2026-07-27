@@ -92,25 +92,27 @@ nodes that give every branch the same number of hops before
 `risk_synthesis`, so all three land in the same superstep and the join
 fires exactly once.
 
-### Citation verification is not wired into this workflow slice
+### Citation verification is live in this workflow
 
-§6.1's `ProvenanceLedger` verification (`shared/provenance`) requires the
-*same* ledger instance to back both a RAG-consuming closure's retrieval
-(e.g. a ledger-bound `policy_lookup`, per `agents/compliance_agent/
-policy_lookup.py`'s `make_rag_policy_lookup`) and the later
-`require_verified` check — "one ledger instance covers one agent's task."
-This workflow, like `workflows/document_assessment`, takes each agent as a
-single, already-constructed instance built *once*, outside the graph, and
-reused across every node call — there is no per-task reconstruction point
-at which a fresh ledger could be threaded into a ledger-bound closure
-before that closure is already fixed. Passing a freshly-created ledger
-into each node's call here anyway would look like citation verification is
-happening while actually verifying nothing (a ledger that recorded
-nothing always rejects everything) — worse than not attempting it. Wiring
-this for real needs each agent (or at least its knowledge-consuming
-closures) constructed per workflow-instance rather than once at process
-start; that's a larger integration change than this slice makes, not a
-gap silently worked around here.
+Every agent node constructs a fresh ``ProvenanceLedger`` and passes it into
+the agent call, so §6.1's deterministic check runs against what that task's
+tool calls actually returned. A fabricated citation raises
+``FabricatedCitationError`` at the node rather than reaching an officer.
+
+One ledger per node, not one per workflow, because §6.1 scopes verification
+to a single agent task: a shared ledger would let Recommendation cite a
+clause that only Compliance ever retrieved, which is precisely the
+cross-contamination the per-task scope exists to prevent.
+
+This required one change to make it real rather than decorative.
+``make_rag_policy_lookup`` used to bind a ledger at construction time, and
+since agents are built once at process start, the closure's ledger and the
+one handed to ``check_compliance`` were always different objects — retrieval
+recorded into one, verification read the other, so either every citation
+failed or (with no ledger passed) nothing was checked at all. The lookup now
+takes the ledger per call and ``ComplianceAgent`` forwards its own, so both
+halves share one instance without the workflow having to arrange it.
+
 """
 
 from __future__ import annotations
@@ -138,6 +140,7 @@ from services.publishing_service import (
     publish_committee_materials,
 )
 from shared.llm.model_tiers import AgentName
+from shared.provenance import ProvenanceLedger
 from shared.schemas.compliance import ComplianceChecklist
 from shared.schemas.documents import DocumentExtractionRecord
 from shared.schemas.finance import FinancialAnalysis
@@ -275,13 +278,11 @@ def build_loan_assessment_graph(
         record = state['extraction_record']
         assert record is not None
         # No ledger passed here — see "Citation verification is not wired
-        # into this workflow slice" in the module docstring: compliance_agent
-        # is constructed once, outside this graph, and a ledger constructed
-        # fresh per node call would not be the same object any ledger-bound
-        # policy_lookup was constructed against, making verification here
-        # structurally meaningless rather than actually protective.
         checklist = await compliance_agent.check_compliance(
-            state['document_id'], record, state['compliance_requirements']
+            state['document_id'],
+            record,
+            state['compliance_requirements'],
+            ledger=ProvenanceLedger(),
         )
         return {'compliance_checklist': checklist, 'stage_log': ['compliance_check']}
 
@@ -312,12 +313,16 @@ def build_loan_assessment_graph(
             state['calculation_requests'],
             product_query=state.get('product_query'),
             workflow_id=state['document_id'],
+            ledger=ProvenanceLedger(),
         )
         return {'financial_analysis': analysis, 'stage_log': ['finance_analysis']}
 
     async def _market_research_node(state: LoanAssessmentState) -> dict:
         brief = await market_agent.gather_market_context(
-            state['sector'], state['region'], workflow_id=state['document_id']
+            state['sector'],
+            state['region'],
+            workflow_id=state['document_id'],
+            ledger=ProvenanceLedger(),
         )
         return {'market_brief': brief, 'stage_log': ['market_research']}
 
@@ -335,6 +340,7 @@ def build_loan_assessment_graph(
             market_brief=state['market_brief'],
             precedent_query=state.get('precedent_query'),
             workflow_id=state['document_id'],
+            ledger=ProvenanceLedger(),
         )
         return {'risk_rating': rating, 'stage_log': ['risk_synthesis']}
 
@@ -396,6 +402,7 @@ def build_loan_assessment_graph(
             market_brief=state['market_brief'],
             precedent_query=state.get('precedent_query'),
             workflow_id=state['document_id'],
+            ledger=ProvenanceLedger(),
         )
         return {'recommendation': output, 'stage_log': ['recommendation']}
 

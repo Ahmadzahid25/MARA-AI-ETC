@@ -17,6 +17,9 @@ Two behaviors here are specified, not incidental:
   citations, which the agent reports as NO_POLICY_FOUND — the honest answer.
   What must never happen is a weak match being passed through as support, so the
   threshold is applied at retrieval and the agent never sees the discards.
+- **The ledger arrives per call, not at construction.** See
+  ``make_rag_policy_lookup`` — binding one here is what previously made §6.1
+  verification vacuous in every real workflow.
 """
 
 from __future__ import annotations
@@ -41,7 +44,6 @@ DEFAULT_MIN_RELEVANCE = 0.6
 def make_rag_policy_lookup(
     backend: KnowledgeBackend,
     *,
-    ledger: ProvenanceLedger,
     workflow_id: str | None = None,
     top_k: int = DEFAULT_TOP_K,
     min_relevance: float = DEFAULT_MIN_RELEVANCE,
@@ -49,13 +51,19 @@ def make_rag_policy_lookup(
 ) -> PolicyLookup:
     """Build a ``PolicyLookup`` that queries the knowledge corpus.
 
-    ``ledger`` is required rather than optional, unlike on the tool itself: a
-    compliance finding always cites, so a lookup that did not record what it
-    retrieved would produce citations that fail verification later, further from
-    the cause. Requiring it here puts the error at construction time instead.
+    The ledger is supplied *per call*, not bound here. An earlier version bound
+    one at construction time, and that quietly made verification impossible in
+    any real workflow: agents are built once at process start, so the closure's
+    ledger and the one later handed to ``check_compliance`` were different
+    objects — retrieval recorded into one, verification read the other, and
+    every citation failed. Taking it per call means the agent forwards the same
+    instance to both halves, which is what §6.1's "one ledger instance covers
+    one agent's task" actually requires.
     """
 
-    async def lookup(requirement: str) -> list[PolicyCitation]:
+    async def lookup(
+        requirement: str, ledger: ProvenanceLedger | None = None
+    ) -> list[PolicyCitation]:
         result = await rag_query(
             RetrievalQuery(
                 query=requirement,
