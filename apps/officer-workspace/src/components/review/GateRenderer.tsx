@@ -1,5 +1,7 @@
 import { Chip, Divider, Typography } from '@openhands/ui';
 import { confidenceColor, confidenceLabel } from '../../types/documents';
+import { PolicyCitationRenderer } from './PolicyCitationRenderer';
+import { RetrievalSummary } from './RetrievalSummary';
 import type { PendingGate } from '../../services/api';
 import type {
   ExtractionPayload,
@@ -81,6 +83,7 @@ function ComplianceGate({ payload }: { payload: CompliancePayload | null }) {
 
   return (
     <div className="space-y-3">
+      <RetrievalSummary result={payload.retrieval_result ?? null} />
       {payload.items.map((item, i) => {
         const statusColor: Record<string, 'green' | 'red' | 'primaryDark' | 'gray'> = {
           pass: 'green',
@@ -103,6 +106,7 @@ function ComplianceGate({ payload }: { payload: CompliancePayload | null }) {
                 {item.notes}
               </Typography.Text>
             )}
+            <PolicyCitationRenderer citation={item.policy_citation ?? null} />
           </div>
         );
       })}

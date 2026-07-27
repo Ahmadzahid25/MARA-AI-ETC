@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Button, Chip, Input, Tabs, Typography } from '@openhands/ui';
 import { AppLayout } from '../components/layout/AppLayout';
 import { GateRenderer } from '../components/review/GateRenderer';
+import { CorrectionForm } from '../components/review/CorrectionForm';
 import { useAssessments } from '../context/AssessmentContext';
 import { submitGateDecision, extractGateRole, ApiError } from '../services/data';
 import type { PendingGate } from '../services/api';
 import type { FieldCorrection } from '../types/approval';
+import type { ExtractedField } from '../types/documents';
 
 export function ReviewConsolePage() {
   const { assessments, updateAssessment } = useAssessments();
@@ -110,6 +112,20 @@ function AssessmentCard({
   );
 }
 
+const GATE_QUESTIONS: Record<string, string> = {
+  confirm_extraction: 'Confirm that the extracted document fields are accurate. Verify values against the source document.',
+  compliance_acknowledgment: 'Acknowledge the compliance check results below. Are there any policy violations that need attention?',
+  financial_sign_off: 'Review the financial assessment. Do the figures and metrics look correct?',
+  risk_review: 'Review the risk rating and flags. Is the risk assessment appropriate for this application?',
+  recommendation_approval: 'Review the recommendation. Do you approve the suggested decision?',
+  publish_approval: 'Review the generated documents. Are they ready to be published to the applicant?',
+};
+
+function extractFieldsFromPayload(payload: Record<string, unknown> | null): ExtractedField[] | null {
+  if (!payload?.fields || !Array.isArray(payload.fields)) return null;
+  return payload.fields as ExtractedField[];
+}
+
 function AssessmentDetail({
   assessment,
   onBack,
@@ -130,9 +146,10 @@ function AssessmentDetail({
   const [gateError, setGateError] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [showCorrect, setShowCorrect] = useState(false);
-  const [corrections, setCorrections] = useState<FieldCorrection[]>([]);
-
-  async function handleAction(action: 'approve' | 'reject' | 'correct') {
+  async function handleAction(
+    action: 'approve' | 'reject' | 'correct',
+    fieldCorrections?: FieldCorrection[],
+  ) {
     if (submitting) return;
     setSubmitting(true);
     setGateError(null);
@@ -142,7 +159,7 @@ function AssessmentDetail({
         assessment.thread_id,
         action,
         reason,
-        corrections,
+        fieldCorrections,
       );
       onUpdated({
         status: res.status,
@@ -152,7 +169,6 @@ function AssessmentDetail({
         acted_gate: res.acted_gate,
       });
       setReason('');
-      setCorrections([]);
       setShowCorrect(false);
     } catch (err) {
       if (err instanceof ApiError && err.status === 403) {
@@ -215,9 +231,14 @@ function AssessmentDetail({
         )}
 
         <div className="px-6 py-4">
-          <Typography.H5 className="mb-3 text-slate-900 dark:text-white">Current Gate</Typography.H5>
+          <Typography.H5 className="mb-1 text-slate-900 dark:text-white">Current Gate</Typography.H5>
           {assessment.pending_gate ? (
-            <GateRenderer gate={assessment.pending_gate} payload={assessment.pending_payload} />
+            <>
+              <Typography.Text fontSize="xs" className="mb-4 block text-slate-500 dark:text-slate-400">
+                {GATE_QUESTIONS[assessment.pending_gate] ?? 'Review the information below and make a decision.'}
+              </Typography.Text>
+              <GateRenderer gate={assessment.pending_gate} payload={assessment.pending_payload} />
+            </>
           ) : (
             <Typography.Text fontSize="s" className="text-slate-400">
               No pending gate — assessment is complete.
@@ -254,25 +275,36 @@ function AssessmentDetail({
             <Typography.H5 className="mb-3 text-slate-900 dark:text-white">Decision</Typography.H5>
 
             {showCorrect ? (
-              <div className="space-y-3">
-                <Typography.Text fontSize="s" className="text-slate-500 dark:text-slate-400">
-                  Enter corrected values for fields that need changes.
-                </Typography.Text>
-                <Input
-                  label="Correction reason"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  placeholder="Why are these corrections needed?"
+              assessment.pending_gate === 'confirm_extraction' ? (
+                <CorrectionForm
+                  fields={extractFieldsFromPayload(assessment.pending_payload) ?? []}
+                  onSubmit={(fieldCorrections) => {
+                    setReason(fieldCorrections.map((c) => c.reason).filter(Boolean).join('; ') || 'Field corrections applied');
+                    handleAction('correct', fieldCorrections);
+                  }}
+                  onCancel={() => setShowCorrect(false)}
                 />
-                <div className="flex gap-3">
-                  <Button variant="primary" onClick={() => handleAction('correct')} disabled={submitting}>
-                    {submitting ? 'Submitting...' : 'Submit Correction'}
-                  </Button>
-                  <Button variant="secondary" onClick={() => setShowCorrect(false)}>
-                    Cancel
-                  </Button>
+              ) : (
+                <div className="space-y-3">
+                  <Typography.Text fontSize="s" className="text-slate-500 dark:text-slate-400">
+                    Describe what needs to be corrected and why. This will trigger a re-run of the current stage.
+                  </Typography.Text>
+                  <Input
+                    label="Correction reason"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="What needs to be corrected and why?"
+                  />
+                  <div className="flex gap-3">
+                    <Button variant="primary" onClick={() => handleAction('correct')} disabled={submitting}>
+                      {submitting ? 'Submitting...' : 'Submit Correction'}
+                    </Button>
+                    <Button variant="secondary" onClick={() => { setShowCorrect(false); setReason(''); }}>
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               <div className="space-y-3">
                 <Input
