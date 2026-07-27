@@ -1,9 +1,11 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { NavLink } from 'react-router';
 import { Icon, Input } from '@openhands/ui';
-import { logout } from '../../services/auth';
+import { getUserProfile, logout } from '../../services/auth';
 import { useTheme } from '../../context/ThemeContext';
+import type { UserProfile } from '../../services/auth';
 import logo from '../../assets/mara-ai-etc.png';
+import { MOCK_AUTH } from '../../constants';
 
 interface AppLayoutProps {
   title: string;
@@ -53,6 +55,14 @@ const NAV_ITEMS = [
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { theme, toggleTheme } = useTheme();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    getUserProfile().then(setProfile);
+  }, []);
+
+  const displayName = profile?.name ?? MOCK_AUTH.DEV_NAME;
+  const displayRole = `Cawangan Ibu Pejabat · ${profile?.roles[0] ?? MOCK_AUTH.DEV_ROLE}`;
 
   return (
     <div className="flex h-full flex-col justify-between">
@@ -100,8 +110,8 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           <Icon icon={theme === 'dark' ? 'MoonFill' : 'SunFill'} className="h-4 w-4 text-amber-500 dark:text-indigo-400" />
           <span>{theme === 'dark' ? 'Dark Mode' : 'Light Mode'}</span>
         </button>
-        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">Officer (Dev Mode)</p>
-        <p className="text-xs text-slate-500 dark:text-slate-400">Cawangan Ibu Pejabat · Officer</p>
+        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{displayName}</p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">{displayRole}</p>
         <button
           onClick={logout}
           className="mt-2 flex items-center gap-1.5 text-xs font-medium text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 hover:underline cursor-pointer"

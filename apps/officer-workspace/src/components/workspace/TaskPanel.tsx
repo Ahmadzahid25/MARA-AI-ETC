@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { Chip, Scrollable, Typography } from '@openhands/ui';
 import type { Task, TaskStatus } from '../../types/workspace';
-import { MOCK_TASKS } from '../../mocks/mock-data';
+import { fetchTasks } from '../../services/data';
+import { UI, WORKSPACE } from '../../constants';
 
 const STATUS_CONFIG: Record<
   TaskStatus,
@@ -15,10 +17,16 @@ const STATUS_CONFIG: Record<
 };
 
 export function TaskPanel() {
-  const pendingCount = MOCK_TASKS.filter(
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  useEffect(() => {
+    fetchTasks().then(setTasks);
+  }, []);
+
+  const pendingCount = tasks.filter(
     (t) => t.status === 'pending' || t.status === 'in_progress',
   ).length;
-  const awaitingCount = MOCK_TASKS.filter(
+  const awaitingCount = tasks.filter(
     (t) => t.status === 'awaiting_approval',
   ).length;
 
@@ -26,18 +34,18 @@ export function TaskPanel() {
     <aside className="flex w-72 shrink-0 flex-col border-r border-slate-200 bg-white dark:border-[#222328] dark:bg-[#131417]">
       <div className="border-b border-slate-100 bg-slate-50/50 dark:border-[#222328] dark:bg-[#18191C]/50 px-4 py-3.5">
         <div className="flex items-center justify-between">
-          <Typography.H5 className="font-bold text-slate-900 dark:text-white">Tasks</Typography.H5>
+          <Typography.H5 className="font-bold text-slate-900 dark:text-white">{WORKSPACE.TASK_HEADING}</Typography.H5>
           <span className="rounded-full bg-slate-200/60 dark:bg-[#222328] px-2 py-0.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-            {MOCK_TASKS.length}
+            {tasks.length}
           </span>
         </div>
         <div className="mt-2.5 flex flex-wrap gap-1.5">
           <Chip color="aqua" variant="pill" className="border-cyan-200 bg-cyan-50 text-cyan-700 dark:border-cyan-800/60 dark:bg-cyan-950/80 text-xs font-semibold dark:text-cyan-300">
-            {pendingCount} active
+            {pendingCount} {WORKSPACE.CHIP_ACTIVE_LABEL}
           </Chip>
           {awaitingCount > 0 && (
             <Chip color="primaryDark" variant="pill" className="border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/60 dark:bg-amber-950/80 text-xs font-semibold dark:text-amber-300">
-              {awaitingCount} awaiting
+              {awaitingCount} {WORKSPACE.CHIP_AWAITING_LABEL}
             </Chip>
           )}
         </div>
@@ -45,7 +53,7 @@ export function TaskPanel() {
 
       <Scrollable className="flex-1">
         <div className="space-y-1.5 p-2.5">
-          {MOCK_TASKS.map((task) => (
+          {tasks.map((task) => (
             <TaskItem key={task.id} task={task} />
           ))}
         </div>
@@ -60,14 +68,11 @@ function TaskItem({ task }: { task: Task }) {
   return (
     <div className="cursor-pointer rounded-xl border border-transparent p-3 transition-all hover:border-slate-200 hover:bg-slate-50 hover:shadow-sm dark:hover:border-[#2C2E34] dark:hover:bg-[#18191C] dark:hover:shadow-lg">
       <div className="mb-2 flex items-center justify-between gap-1">
-        <Chip color={config.color} variant="pill" className={`shrink-0 px-2 py-0.5 text-[11px] font-semibold ${config.bg}`}>
+        <Chip color={config.color} variant="pill" className={`shrink-0 px-2 py-0.5 ${WORKSPACE.FONT_XS_11} font-semibold ${config.bg}`}>
           {config.label}
         </Chip>
-        <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">
-          {new Date(task.updated_at).toLocaleTimeString('en-MY', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+        <span className={`${WORKSPACE.FONT_XS_11} font-medium text-slate-400 dark:text-slate-500`}>
+          {new Date(task.updated_at).toLocaleTimeString(UI.LOCALE, UI.DATE_FORMAT_OPTIONS)}
         </span>
       </div>
       <Typography.Text fontSize="s" className="block font-semibold leading-snug text-slate-800 dark:text-slate-200 line-clamp-2">

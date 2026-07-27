@@ -1,5 +1,6 @@
 import { Typography } from '@openhands/ui';
 import type { AdminUser } from '../../types/admin';
+import { UI } from '../../constants';
 
 const STATUS_BADGES: Record<string, string> = {
   active: 'bg-green-100 text-green-700',
@@ -57,7 +58,7 @@ export function UserManagementTab({ users }: UserManagementTabProps) {
                 </td>
                 <td className="px-4 py-2.5 text-gray-500 dark:text-slate-500">
                   {u.last_login
-                    ? new Date(u.last_login).toLocaleDateString('en-MY')
+                    ? new Date(u.last_login).toLocaleDateString(UI.LOCALE)
                     : '—'}
                 </td>
               </tr>

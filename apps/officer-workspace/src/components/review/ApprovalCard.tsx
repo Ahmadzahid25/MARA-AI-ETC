@@ -5,6 +5,7 @@ import type { ApprovalRequest } from '../../types/approval';
 import type { FieldCorrection } from '../../types/approval';
 import { FieldPreview } from './FieldPreview';
 import { CorrectionForm } from './CorrectionForm';
+import { CONFIDENCE, UI } from '../../constants';
 
 interface ApprovalCardProps {
   request: ApprovalRequest;
@@ -25,7 +26,7 @@ export function ApprovalCard({
   const [showCorrection, setShowCorrection] = useState(false);
   const [reason, setReason] = useState('');
 
-  const lowConfidenceFields = fields.filter((f) => f.confidence < 0.85);
+  const lowConfidenceFields = fields.filter((f) => f.confidence < CONFIDENCE.HIGH_THRESHOLD);
 
   function handleApprove() {
     onDecision(request.id, 'approve', reason);
@@ -57,7 +58,7 @@ export function ApprovalCard({
             </p>
           </div>
           <Typography.Text fontSize="xs" className="text-gray-400 dark:text-slate-500">
-            {new Date(request.created_at).toLocaleString('en-MY')}
+            {new Date(request.created_at).toLocaleString(UI.LOCALE)}
           </Typography.Text>
         </div>
 
