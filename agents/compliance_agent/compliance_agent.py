@@ -52,7 +52,7 @@ class ComplianceCheckParsingError(Exception):
 # agents/compliance_agent/policy_lookup.py's make_rag_policy_lookup(); the
 # default below stays as the honest no-corpus behavior for environments with no
 # Knowledge Service wired up.
-PolicyLookup = Callable[[str], Awaitable[list[PolicyCitation]]]
+PolicyLookup = Callable[[str, ProvenanceLedger | None], Awaitable[list[PolicyCitation]]]
 
 # requirement, the policy citations found for it, and the document under
 # review -> (status, notes). Only invoked when policy_lookup found at least
@@ -65,7 +65,9 @@ ComplianceChecker = Callable[
 ]
 
 
-async def _default_policy_lookup(requirement: str) -> list[PolicyCitation]:
+async def _default_policy_lookup(
+    requirement: str, ledger: ProvenanceLedger | None = None
+) -> list[PolicyCitation]:
     """No corpus wired up: every requirement resolves to NO_POLICY_FOUND.
 
     §5.4's specified behavior for an inconclusive corpus lookup, kept as the
@@ -154,15 +156,22 @@ class ComplianceAgent:
         checklist is verified against what the RAG tool actually returned during
         this task, and a citation naming a clause that was never retrieved
         raises ``FabricatedCitationError`` rather than reaching the officer
-        (docs/architecture/06-tool-architecture.md §6.1). Pass the same ledger
-        that was given to ``make_rag_policy_lookup``; omitting it skips the
-        check, which is only appropriate for a caller whose lookup does not
-        retrieve — the default stub, or an injected test double.
+        (docs/architecture/06-tool-architecture.md §6.1).
+
+        Callers pass a **fresh ledger per task** — this method forwards it to
+        the lookup, so retrieval and verification share one instance without the
+        caller having to arrange that. Omitting it skips the check, which is
+        only appropriate for a caller whose lookup does not retrieve: the
+        default stub, or an injected test double.
         """
 
         items: list[ComplianceChecklistItem] = []
         for requirement in requirements:
-            citations = await self._policy_lookup(requirement)
+            # The same ledger goes to the lookup that records retrievals and to
+            # the verification below — §6.1's "one ledger instance covers one
+            # agent's task". Forwarding rather than letting the lookup hold its
+            # own is what makes the check meaningful instead of vacuous.
+            citations = await self._policy_lookup(requirement, ledger)
             if not citations:
                 items.append(
                     ComplianceChecklistItem(

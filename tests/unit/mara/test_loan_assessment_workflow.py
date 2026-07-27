@@ -24,6 +24,7 @@ from agents.recommendation_agent.recommendation_agent import (
     RecommendationAgent,
 )
 from agents.risk_agent.risk_agent import ComponentRiskScores, RiskAgent
+from shared.provenance import FabricatedCitationError
 from shared.schemas.compliance import ComplianceStatus
 from shared.schemas.documents import Citation, ExtractedField, ExtractionSource
 from shared.schemas.recommendation import RecommendationDecision
@@ -253,10 +254,21 @@ class TestFinancialSignOffRejection:
 
 class TestHardComplianceViolation:
     def _violating_compliance_agent(self) -> ComplianceAgent:
-        async def lookup(requirement: str):
+        async def lookup(requirement: str, ledger=None):
+            """Stands in for a real RAG lookup, including its ledger write.
+
+            The recording is not incidental: the workflow now runs §6.1
+            verification on the finished checklist, so a double that returns a
+            citation it never recorded is — correctly — indistinguishable from
+            a fabrication and gets rejected. Recording keeps this double
+            faithful to what `make_rag_policy_lookup` actually does.
+            """
             from shared.schemas.knowledge import PolicyCitation
 
-            return [PolicyCitation(document_id='pol-1', version='v1', locator='1')]
+            citation = PolicyCitation(document_id='pol-1', version='v1', locator='1')
+            if ledger is not None:
+                ledger.record_returned('rag_query', (citation.to_citable_ref(),))
+            return [citation]
 
         async def checker(requirement, citations, record):
             return ComplianceStatus.FAIL, 'Business registration expired.'
@@ -352,3 +364,65 @@ class TestHardComplianceViolation:
         assert result['recommendation'] is not None
         assert result['recommendation'].decision is None
         assert result['recommendation'].withheld_reason is not None
+
+
+class TestCitationVerificationIsLive:
+    """§6.1 verification has to be *wired in*, not merely available.
+
+    Every agent module accepts a ledger, but for a while no workflow passed
+    one — so the control existed and protected nothing. These tests fail if
+    that regresses: remove the ledger from the compliance node and the first
+    one goes green when it should not.
+    """
+
+    @staticmethod
+    def _fabricating_compliance_agent() -> ComplianceAgent:
+        """A lookup that retrieves clause 1 but reports clause 9.9.
+
+        The retrieval is real, so the ledger is populated — this is the
+        dangerous shape, not an empty-ledger false positive: a well-formed
+        citation to a neighbouring clause that was never actually returned.
+        """
+
+        async def lookup(requirement: str, ledger=None):
+            from shared.schemas.knowledge import PolicyCitation
+
+            retrieved = PolicyCitation(document_id='pol-1', version='v1', locator='1')
+            if ledger is not None:
+                ledger.record_returned('rag_query', (retrieved.to_citable_ref(),))
+            return [PolicyCitation(document_id='pol-1', version='v1', locator='9.9')]
+
+        async def checker(requirement, citations, record):
+            return ComplianceStatus.PASS, 'Satisfied.'
+
+        return ComplianceAgent(policy_lookup=lookup, checker=checker)
+
+    @pytest.mark.asyncio
+    async def test_a_fabricated_citation_stops_the_workflow(self) -> None:
+        compiled = _compiled_graph(
+            compliance_agent=self._fabricating_compliance_agent()
+        )
+        config = {'configurable': {'thread_id': 'wf-cite-1'}}
+
+        await compiled.ainvoke(
+            _initial_state(['valid business registration']), config=config
+        )
+
+        with pytest.raises(FabricatedCitationError, match='pol-1@v1#9.9'):
+            await compiled.ainvoke(
+                Command(resume={'status': 'approved', 'actor': 'officer-1'}),
+                config=config,
+            )
+
+    @pytest.mark.asyncio
+    async def test_an_honest_citation_passes_through(self) -> None:
+        """The counterpart, so the test above is known to be catching the
+        fabrication rather than the workflow simply always failing here."""
+
+        compiled = _compiled_graph()
+        config = {'configurable': {'thread_id': 'wf-cite-2'}}
+
+        result = await _approve_through_happy_path(compiled, config)
+
+        assert result['compliance_checklist'] is not None
+        assert result['stage_log'][-1] == 'completion'
