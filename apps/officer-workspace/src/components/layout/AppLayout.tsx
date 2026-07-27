@@ -178,6 +178,3 @@ export function AppLayout({ title, subtitle, children }: AppLayoutProps) {
     </div>
   );
 }
-
-
-

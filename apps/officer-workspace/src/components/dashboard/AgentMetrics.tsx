@@ -98,4 +98,3 @@ export function AgentMetrics({ metrics }: AgentMetricsProps) {
     </div>
   );
 }
-

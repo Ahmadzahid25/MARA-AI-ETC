@@ -82,4 +82,3 @@ function TaskItem({ task }: { task: Task }) {
     </div>
   );
 }
-

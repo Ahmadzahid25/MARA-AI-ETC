@@ -6,7 +6,7 @@ Dokumen ini merekodkan struktur UI/UX sedia ada secara terperinci (termasuk vers
 
 ## 1. Ringkasan Keseluruhan
 
-Aplikasi **MARA AI-ETC (Officer Workspace)** adalah sebuah Platform AI Agentic bagi pegawai keusahawanan MARA (Majlis Amanah Rakyat) — bukan sebuah chatbot biasa. 
+Aplikasi **MARA AI-ETC (Officer Workspace)** adalah sebuah Platform AI Agentic bagi pegawai keusahawanan MARA (Majlis Amanah Rakyat) — bukan sebuah chatbot biasa.
 
 Walaupun antaramuka ini digunakan secara langsung oleh Pegawai MARA, **tujuan utama dan nadi kepada seluruh platform ini adalah untuk memberi perkhidmatan dan mempercepatkan pemprosesan permohonan[...]
 

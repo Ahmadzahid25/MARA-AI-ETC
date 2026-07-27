@@ -66,4 +66,3 @@ export function WorkflowList({ workflows }: WorkflowListProps) {
     </div>
   );
 }
-

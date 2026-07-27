@@ -93,4 +93,3 @@ export function PendingSummary({ approvals, riskFlags }: PendingSummaryProps) {
     </div>
   );
 }
-

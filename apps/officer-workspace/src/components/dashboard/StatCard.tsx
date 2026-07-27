@@ -24,4 +24,3 @@ export function StatCard({ label, value, variant = 'default' }: StatCardProps) {
     </div>
   );
 }
-
