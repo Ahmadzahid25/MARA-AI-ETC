@@ -36,6 +36,26 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    # frontend/ lints through eslint-config-airbnb + eslint-config-airbnb-typescript,
+    # in the legacy .eslintrc format. Neither config has a release that accepts a
+    # newer major, so these three majors cannot be installed at all — `npm ci`
+    # fails to resolve before any lint rule runs:
+    #
+    #   eslint-config-airbnb@19.0.4 (latest published) peers eslint ^7.32.0 || ^8.2.0
+    #   eslint-config-airbnb-typescript@18.0.0        peers @typescript-eslint/* ^7.0.0
+    #
+    # Adopting them means replacing the airbnb config stack and migrating
+    # .eslintrc to flat config — a deliberate piece of work, not a dependency
+    # bump. Until someone does that, these majors are unmergeable by
+    # construction, so don't spend a PR slot re-proposing them. Minors and
+    # patches (including the rest of the eslint group) still flow normally.
+    ignore:
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@typescript-eslint/eslint-plugin"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@typescript-eslint/parser"
+        update-types: ["version-update:semver-major"]
     groups:
       docusaurus:
         patterns:
