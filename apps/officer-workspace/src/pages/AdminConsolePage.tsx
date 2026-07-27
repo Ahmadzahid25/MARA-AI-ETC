@@ -52,7 +52,10 @@ export function AdminConsolePage() {
     return (
       <AppLayout title="Admin Console" subtitle="User / role / agent configuration">
         <div className="flex items-center justify-center py-20">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Loading...</p>
+          <div className="flex items-center gap-3">
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600 dark:border-slate-600 dark:border-t-indigo-400" />
+            <span className="text-sm text-slate-500 dark:text-slate-400">Loading...</span>
+          </div>
         </div>
       </AppLayout>
     );

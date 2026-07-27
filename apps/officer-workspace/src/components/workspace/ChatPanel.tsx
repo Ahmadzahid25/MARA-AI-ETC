@@ -111,9 +111,19 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
 
       <Scrollable className="flex-1 px-6 py-4">
         <div className="mx-auto max-w-3xl space-y-4">
-          {messages.map((msg) => (
-            <MessageBubble key={msg.id} message={msg} />
-          ))}
+          {messages.length === 0 ? (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center">
+                <Typography.Text fontSize="s" className="text-slate-400 dark:text-slate-500">
+                  Send a message or upload a document to start.
+                </Typography.Text>
+              </div>
+            </div>
+          ) : (
+            messages.map((msg) => (
+              <MessageBubble key={msg.id} message={msg} />
+            ))
+          )}
           <div ref={messagesEndRef} />
         </div>
       </Scrollable>
@@ -124,6 +134,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
             <div className="flex items-center gap-1.5 shrink-0">
               <button
                 type="button"
+                aria-label="Attach file"
                 title={WORKSPACE.FILE_ATTACH_TITLE}
                 onClick={onFileAttach}
                 className="w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all cursor-pointer shrink-0"
@@ -132,6 +143,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
               </button>
               <button
                 type="button"
+                aria-label={isRecording ? 'Stop recording' : 'Voice input'}
                 title={isRecording ? 'Stop recording' : WORKSPACE.VOICE_INPUT_TITLE}
                 onClick={toggleRecording}
                 disabled={!dictationSupported}
@@ -146,6 +158,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
             </div>
             <input
               type="text"
+              aria-label="Chat message"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder={WORKSPACE.CHAT_PLACEHOLDER}
@@ -154,7 +167,8 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
             />
             <button
               type="button"
-                title={WORKSPACE.SEND_MESSAGE_TITLE}
+              aria-label="Send message"
+              title={WORKSPACE.SEND_MESSAGE_TITLE}
               onClick={handleSend}
               disabled={uploading}
               className="w-[42px] h-[42px] rounded-full text-white flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow transition-all ml-1"
