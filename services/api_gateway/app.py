@@ -21,7 +21,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from services.api_gateway.middleware import CorrelationIdMiddleware
-from services.api_gateway.routers import approvals, diagnostics, documents, health
+from services.api_gateway.routers import (
+    approvals,
+    diagnostics,
+    documents,
+    health,
+    loans,
+)
 from services.api_gateway.telemetry import instrument_app
 from services.approval_service.approval_service import (
     AsyncAuditWriter,
@@ -35,6 +41,7 @@ _UNSET = object()
 def create_app(
     workflow: ResumableWorkflow | None = None,
     audit_writer: AsyncAuditWriter | None | object = _UNSET,
+    loan_workflow: ResumableWorkflow | None = None,
 ) -> FastAPI:
     """``workflow``: the compiled Document Assessment workflow graph.
     Tests pass one directly (e.g. compiled with ``InMemorySaver``). Left
@@ -54,8 +61,16 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        if workflow is not None:
-            app.state.workflow = workflow
+        if workflow is not None or loan_workflow is not None:
+            # Test/injection path. Either graph may be supplied alone — a test
+            # exercising the loan endpoints has no reason to also build a
+            # Document Assessment graph, and vice versa. The unset one is left
+            # absent rather than stubbed, so touching its routes raises rather
+            # than silently operating on a placeholder.
+            if workflow is not None:
+                app.state.workflow = workflow
+            if loan_workflow is not None:
+                app.state.loan_workflow = loan_workflow
             app.state.audit_writer = None if audit_writer is _UNSET else audit_writer
             yield
             return
@@ -63,6 +78,7 @@ def create_app(
         from services.api_gateway.composition import (
             build_real_audit_writer,
             build_real_calibration_writer,
+            build_real_loan_workflow,
             build_real_workflow,
         )
 
@@ -74,10 +90,16 @@ def create_app(
             build_real_calibration_writer(settings) as real_calibration_writer,
             build_real_audit_writer(settings) as real_audit_writer,
         ):
-            async with build_real_workflow(
-                settings, calibration_writer=real_calibration_writer
-            ) as real_workflow:
+            async with (
+                build_real_workflow(
+                    settings, calibration_writer=real_calibration_writer
+                ) as real_workflow,
+                build_real_loan_workflow(
+                    settings, calibration_writer=real_calibration_writer
+                ) as real_loan_workflow,
+            ):
                 app.state.workflow = real_workflow
+                app.state.loan_workflow = real_loan_workflow
                 app.state.audit_writer = real_audit_writer
                 yield
 
@@ -96,5 +118,6 @@ def create_app(
     app.include_router(diagnostics.router)
     app.include_router(documents.router)
     app.include_router(approvals.router)
+    app.include_router(loans.router)
 
     return app

@@ -70,10 +70,45 @@ is the officer-facing UI. Full context, in this order:
   authenticated workspace shell.
 - ❌ Not built yet: Officer Workspace chat/task view, Review & Approval
   Console, Dashboard, Admin Console.
-- ⚠️ Backend agents exist but are **not yet exposed over an API you can call**.
-  Document Agent and Compliance Agent are implemented; the Gateway routes for
-  them are not complete. Keep building against the mocks — but build against
-  the *real* contracts below, which are now settled, not against a guess.
+- ✅ **The Loan Assessment API is live.** All seven agents run behind it, with
+  six approval gates. This is the endpoint the Review & Approval Console is
+  for — you no longer have to build against a mock for the main flow.
+
+    | | |
+    |---|---|
+    | `POST /loans/assessments` | multipart: `file`, `sector`, `region`, optional `compliance_requirements[]`, `product_query`, `precedent_query` |
+    | `POST /loans/assessments/{thread_id}/decision` | JSON: `action` (`approve`/`reject`/`correct`), optional `reason`, `corrections[]` |
+
+  Both return the same shape: `status` (`pending_approval` \| `completed`),
+  `pending_gate`, `pending_payload`, `stage_log`, and `acted_gate` on a
+  decision response.
+
+- ⚠️ It will 503 until an OCR engine and document classifier are wired
+  (`tools/ocr/README.md`). Expected current state, not a bug in your call.
+
+## Three things about the approval flow that will shape your UI
+
+**1. The workflow tells you which gate is next — don't track it yourself.**
+Every response carries `pending_gate`, one of: `confirm_extraction`,
+`compliance_acknowledgment`, `financial_sign_off`, `risk_review`,
+`recommendation_approval`, `publish_approval`. Route the officer from that.
+Keeping your own state machine in the client will drift, and the server's
+answer is the one authorization is checked against.
+
+**2. `pending_payload` differs per gate — deliberately.** Extraction fields at
+one gate, a risk rating at another. It is not flattened into a common shape
+because §10.4 requires the officer see the actual evidence, and a lowest-common
+denominator would drop exactly that. Render per gate.
+
+**3. A 403 here is normal, not a bug.** Each gate has its own approver role
+(§10.2). A Finance Officer opening a case paused at `risk_review` gets 403, and
+the `detail` says which role is required. **Show that as "this stage needs a
+Risk Officer", not as an error.** Don't hide gates the officer can't action —
+they need to see where the case is waiting and on whom.
+
+**Never send `actor` or a gate name.** The actor comes from the token and the
+gate from workflow state. Both are authorization inputs, so neither is
+something the client gets to assert.
 
 ## Backend contracts that are settled (build against these, not a guess)
 

@@ -32,6 +32,10 @@ from contextlib import asynccontextmanager
 
 from agents.compliance_agent import ComplianceAgent
 from agents.document_agent import DocumentAgent
+from agents.finance_agent import FinanceAgent
+from agents.market_agent import MarketAgent
+from agents.recommendation_agent import RecommendationAgent
+from agents.risk_agent import RiskAgent
 from services.approval_service.approval_service import (
     AsyncAuditWriter,
     ResumableWorkflow,
@@ -49,6 +53,7 @@ from workflows.document_assessment import (
     CalibrationWriter,
     build_document_assessment_graph,
 )
+from workflows.loan_assessment import build_loan_assessment_graph
 
 
 @asynccontextmanager
@@ -141,3 +146,38 @@ async def build_real_knowledge_backend(
         dataset_id=settings.dify.dataset_id,
     ) as adapter:
         yield adapter
+
+
+@asynccontextmanager
+async def build_real_loan_workflow(
+    settings: Settings, calibration_writer: CalibrationWriter | None = None
+) -> AsyncIterator[ResumableWorkflow]:
+    """Construct the real Loan Assessment workflow — all seven agents, six
+    approval gates — checkpointed against the primary Postgres instance.
+
+    Same caveat as ``build_real_workflow``: no OCR engine or document
+    classifier is wired underneath ``DocumentAgent`` yet, so every request
+    fails with a typed ``ToolExternalServiceError`` at the first step until one
+    is. That is current platform state, not a fault in this wiring.
+
+    The agents are constructed with their defaults, which means no
+    ``KnowledgeBackend`` and no search engine: Compliance falls back to its
+    honest NO_POLICY_FOUND path, and Market reports live search unavailable.
+    Passing the real Dify adapter and a search engine through here is the next
+    step, and deliberately separate — this change is about the workflow being
+    reachable at all, and wiring backends in the same commit would make it
+    unclear which of the two broke anything that breaks.
+    """
+
+    graph = build_loan_assessment_graph(
+        DocumentAgent(),
+        ComplianceAgent(),
+        FinanceAgent(),
+        MarketAgent(),
+        RiskAgent(),
+        RecommendationAgent(),
+        calibration_writer=calibration_writer,
+    )
+
+    async with postgres_checkpointer(settings) as checkpointer:
+        yield graph.compile(checkpointer=checkpointer)

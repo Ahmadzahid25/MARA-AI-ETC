@@ -37,6 +37,22 @@ class ResumableWorkflow(Protocol):
     async def ainvoke(self, input: Any, config: dict) -> dict: ...  # noqa: A002
 
 
+class InspectableWorkflow(ResumableWorkflow, Protocol):
+    """A resumable workflow whose *pending* state can also be read.
+
+    Needed wherever a caller must know which gate a paused workflow is
+    waiting at before deciding whether the requesting officer may act on it
+    (services/api_gateway/routers/loans.py, against
+    docs/architecture/10-human-in-the-loop.md §10.2's per-gate roles).
+
+    Separate from ``ResumableWorkflow`` rather than folded into it because
+    resuming and inspecting are different capabilities, and the
+    single-gate Document Assessment path needs only the first.
+    """
+
+    async def aget_state(self, config: dict) -> Any: ...
+
+
 # A real, async Audit Memory write (e.g. services.audit_service.write_audit_event
 # bound to a connection pool, via services.audit_service.adapters
 # .approval_record_to_audit_event) — kept as a generic injectable callable
@@ -109,6 +125,48 @@ async def confirm_extraction(
         action=decision.action,
         actor=decision.actor,
         reason=decision.reason,
+        corrections=decision.corrections,
+    )
+    if audit_writer is not None:
+        await audit_writer(record)
+    else:
+        _log_approval(record, audit_sink)
+
+    config = {'configurable': {'thread_id': thread_id}}
+    return await workflow.ainvoke(
+        Command(resume=_resume_payload(decision)), config=config
+    )
+
+
+async def resume_at_gate(
+    workflow: ResumableWorkflow,
+    thread_id: str,
+    document_id: str,
+    gate: str,
+    decision: ApprovalDecisionInput,
+    *,
+    audit_sink: AuditSink | None = None,
+    audit_writer: AsyncAuditWriter | None = None,
+) -> dict:
+    """Resume a multi-gate workflow paused at ``gate``.
+
+    The generalisation of ``confirm_extraction`` for Loan Assessment, which
+    pauses at six different gates rather than one. Same ordering guarantee:
+    the ``ApprovalRecord`` is written **before** resuming, so a decision is on
+    record even if resumption then fails.
+
+    ``gate`` is recorded on the audit trail rather than used to branch — the
+    resume payload is identical at every gate. Without it, an audit reader
+    sees six decisions by six officers on one workflow and no way to tell
+    which stage each one signed off.
+    """
+
+    record = ApprovalRecord(
+        workflow_thread_id=thread_id,
+        document_id=document_id,
+        action=decision.action,
+        actor=decision.actor,
+        reason=f'[{gate}] {decision.reason}' if decision.reason else f'[{gate}]',
         corrections=decision.corrections,
     )
     if audit_writer is not None:

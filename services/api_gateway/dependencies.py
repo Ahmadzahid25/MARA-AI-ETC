@@ -17,6 +17,7 @@ from fastapi import Request
 
 from services.approval_service.approval_service import (
     AsyncAuditWriter,
+    InspectableWorkflow,
     ResumableWorkflow,
 )
 
@@ -36,3 +37,15 @@ def get_audit_writer(request: Request) -> AsyncAuditWriter | None:
     need to know which case they're in."""
 
     return getattr(request.app.state, 'audit_writer', None)
+
+
+def get_loan_workflow(request: Request) -> InspectableWorkflow:
+    """The compiled Loan Assessment graph, set on ``app.state.loan_workflow``.
+
+    Typed ``InspectableWorkflow`` rather than ``ResumableWorkflow`` because
+    this workflow has six approval gates and the router must read which one is
+    pending before deciding whether the requesting officer may act on it
+    (docs/architecture/10-human-in-the-loop.md §10.2).
+    """
+
+    return request.app.state.loan_workflow
