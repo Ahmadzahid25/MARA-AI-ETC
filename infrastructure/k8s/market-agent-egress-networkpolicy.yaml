@@ -1,0 +1,98 @@
+# MARA AI-ETC — Market Agent Network Egress Policy
+#
+# Enforces ACCB Mandatory Change 1 & docs/architecture/11-security-architecture.md §11.7.
+# The Market Agent is the ONLY component in the platform permitted outbound internet
+# egress. All other agents and services are restricted to cluster-internal network traffic.
+#
+# NOTE: NetworkPolicy cannot express a domain allow-list — it matches on IPs,
+# CIDRs and selectors, not DNS names. The HTTP/HTTPS rule permits 80/443 to any
+# destination for the Market Agent. Domain restriction is enforced at the application
+# layer, in tools/search/search_tool.py (§6.6). If domain-level enforcement is ever
+# wanted at the network layer too, it needs a CNI with FQDN policy support
+# (Cilium toFQDNs) or an egress proxy.
+#
+# PROVISIONAL: namespaces `mara-agents` / `mara-platform` and the
+# `app.kubernetes.io/name: market-agent` label are declared here first — no
+# Deployment manifests exist yet. When they land, they must use exactly these
+# names, or this policy silently selects nothing and market-agent falls under
+# default-deny (fail-closed: search breaks rather than leaks).
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: market-agent-egress-policy
+  namespace: mara-agents
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: market-agent
+  policyTypes:
+    - Egress
+  egress:
+    # 1. Allow DNS resolution (port 53 UDP/TCP) to cluster DNS resolver
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # 2. Allow cluster-internal communication (API Gateway, Knowledge Service, Postgres, Redis)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: mara-agents
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: mara-platform
+
+    # 3. Allow external egress to HTTP/HTTPS for web search tools
+    - ports:
+        - protocol: TCP
+          port: 80
+        - protocol: TCP
+          port: 443
+---
+# Default deny all outbound internet egress for all other agent pods
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-external-egress
+  namespace: mara-agents
+spec:
+  # NOTE: this also selects market-agent. NetworkPolicies union rather than
+  # subtract, so market-agent keeps the wider allowance granted above — this
+  # policy restricts by being the *only* one that matches every other pod.
+  # There is no deny primitive: adding rules here can only widen access.
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    # 1. Allow DNS resolution (port 53 UDP/TCP) to cluster DNS resolver
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+
+    # 2. Allow internal cluster traffic only
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: mara-agents
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: mara-platform
