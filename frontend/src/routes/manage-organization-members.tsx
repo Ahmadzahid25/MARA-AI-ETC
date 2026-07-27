@@ -202,7 +202,7 @@ function ManageOrganizationMembers() {
 
         {isLoading && (
           <div className="flex items-center justify-center p-8 text-tertiary-alt">
-            Loading...
+            {t(I18nKey.HOME$LOADING)}
           </div>
         )}
 

@@ -245,6 +245,10 @@ Tests are automatically run during:
 - Pull request checks
 - CI/CD pipeline
 
+## Technical Debt & Follow-up Tasks
+
+- **Upgrade ESLint**: Upgrade to ESLint 10 in the future (or upgrade/replace `eslint-config-airbnb` to support ESLint 10 / flat config) once Airbnb or a modern alternative supports ESLint 10 without peer dependency conflicts.
+
 ## Contributing
 
 Please read the [CONTRIBUTING.md](../CONTRIBUTING.md) file for details on our code of conduct, and the process for submitting pull requests to us.
