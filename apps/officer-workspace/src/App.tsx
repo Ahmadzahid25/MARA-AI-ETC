@@ -7,6 +7,7 @@ import { WorkspacePage } from './pages/WorkspacePage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ReviewConsolePage } from './pages/ReviewConsolePage';
 import { AdminConsolePage } from './pages/AdminConsolePage';
+import { AuditorConsolePage } from './pages/AuditorConsolePage';
 
 export function App() {
   return (
@@ -44,6 +45,14 @@ export function App() {
           element={
             <AuthGuard>
               <AdminConsolePage />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/auditor"
+          element={
+            <AuthGuard>
+              <AuditorConsolePage />
             </AuthGuard>
           }
         />
