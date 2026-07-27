@@ -76,8 +76,7 @@ class RecommendationOutput(BaseModel):
             and self.decision != RecommendationDecision.APPROVE_WITH_CONDITIONS
         ):
             raise ValueError(
-                'conditions is only meaningful when decision is '
-                'APPROVE_WITH_CONDITIONS'
+                'conditions is only meaningful when decision is APPROVE_WITH_CONDITIONS'
             )
         return self
 

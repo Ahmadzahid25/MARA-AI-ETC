@@ -7,6 +7,15 @@
 # keeping it decoupled from OpenHands' own CI cadence.
 name: MARA CI
 
+# Pinned deliberately. `uvx ruff` without a version resolves to whatever is
+# latest at run time, so a ruff release can turn this workflow red with no
+# change to the repository — a failure nobody can attribute to a commit. Keep
+# this in step with pyproject.toml's dev-dependency pin and
+# dev_config/python/.pre-commit-config.yaml's ruff rev, so local pre-commit and
+# CI cannot disagree about what passes.
+env:
+  RUFF_VERSION: "0.12.5"
+
 on:
   push:
     branches: [main]
@@ -45,9 +54,9 @@ jobs:
         with:
           enable-cache: true
       - name: ruff check
-        run: uvx ruff check --select ASYNC,B,E,F,I,Q,UP006,UP007,UP008,W agents tools services workflows shared tests/unit/mara
+        run: uvx ruff@${{ env.RUFF_VERSION }} check --select ASYNC,B,E,F,I,Q,UP006,UP007,UP008,W agents tools services workflows shared tests/unit/mara
       - name: ruff format --check
-        run: uvx ruff format --check agents tools services workflows shared tests/unit/mara
+        run: uvx ruff@${{ env.RUFF_VERSION }} format --check agents tools services workflows shared tests/unit/mara
 
   test:
     name: Unit tests

@@ -22,19 +22,25 @@ from shared.schemas.risk import RiskRating, RiskStatus
 def _passing_checklist() -> ComplianceChecklist:
     return ComplianceChecklist(
         document_id='doc-1',
-        items=[ComplianceChecklistItem(requirement='req-A', status=ComplianceStatus.PASS)],
+        items=[
+            ComplianceChecklistItem(requirement='req-A', status=ComplianceStatus.PASS)
+        ],
     )
 
 
 def _violating_checklist() -> ComplianceChecklist:
     return ComplianceChecklist(
         document_id='doc-1',
-        items=[ComplianceChecklistItem(requirement='req-A', status=ComplianceStatus.FAIL)],
+        items=[
+            ComplianceChecklistItem(requirement='req-A', status=ComplianceStatus.FAIL)
+        ],
     )
 
 
 def _finance() -> FinancialAnalysis:
-    return FinancialAnalysis(document_id='doc-1', assessment='ok', assessment_confidence=0.9)
+    return FinancialAnalysis(
+        document_id='doc-1', assessment='ok', assessment_confidence=0.9
+    )
 
 
 def _complete_risk(confidence: float = 0.9) -> RiskRating:
@@ -48,7 +54,9 @@ def _complete_risk(confidence: float = 0.9) -> RiskRating:
 
 
 def _incomplete_risk() -> RiskRating:
-    return RiskRating(document_id='doc-1', status=RiskStatus.INCOMPLETE, missing_inputs=['market'])
+    return RiskRating(
+        document_id='doc-1', status=RiskStatus.INCOMPLETE, missing_inputs=['market']
+    )
 
 
 def _market() -> MarketBrief:
@@ -136,7 +144,9 @@ class TestIncompleteRiskWithholds:
 class TestNormalRecommendation:
     @pytest.mark.asyncio
     async def test_approve_decision_is_returned(self) -> None:
-        recommender = await _fixed_recommender(RecommendationDecision.APPROVE, confidence=0.9)
+        recommender = await _fixed_recommender(
+            RecommendationDecision.APPROVE, confidence=0.9
+        )
         agent = RecommendationAgent(recommender=recommender)
 
         output = await agent.recommend(
@@ -193,7 +203,9 @@ class TestNormalRecommendation:
 
         class StubBackend:
             async def retrieve(self, query):
-                assert query.filters.document_kinds == frozenset({DocumentKind.PRECEDENT})
+                assert query.filters.document_kinds == frozenset(
+                    {DocumentKind.PRECEDENT}
+                )
                 return RetrievalResult(chunks=(chunk,))
 
         recommender = await _fixed_recommender(RecommendationDecision.APPROVE)

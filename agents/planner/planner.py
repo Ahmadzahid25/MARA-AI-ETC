@@ -85,8 +85,7 @@ KNOWN_TEMPLATES: tuple[WorkflowTemplate, ...] = (
     ),
     WorkflowTemplate(
         name='audio_briefing',
-        description='Officer requests a spoken summary of an approved '
-        'report.',
+        description='Officer requests a spoken summary of an approved report.',
         required_parameters=('document_id',),
     ),
     WorkflowTemplate(
@@ -129,7 +128,9 @@ def _parse_match(raw_content: str) -> tuple[str | None, float]:
         template_name = raw['template_name']
         confidence = float(raw['confidence'])
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
-        raise PlanParsingError(f'Malformed match output {raw_content!r}: {exc}') from exc
+        raise PlanParsingError(
+            f'Malformed match output {raw_content!r}: {exc}'
+        ) from exc
     if not 0.0 <= confidence <= 1.0:
         raise PlanParsingError(f'confidence {confidence} out of range [0.0, 1.0]')
     return template_name, confidence
@@ -193,7 +194,9 @@ class Planner:
             )
 
         template = next(t for t in self._templates if t.name == template_name)
-        missing = [p for p in template.required_parameters if p not in supplied_parameters]
+        missing = [
+            p for p in template.required_parameters if p not in supplied_parameters
+        ]
         if missing:
             return PlanResult(
                 template_name=None,

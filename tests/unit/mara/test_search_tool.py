@@ -83,7 +83,9 @@ class TestDomainAllowList:
             engine=_fake_engine(
                 [
                     SearchResult(url='https://example.com/a', title='A', snippet='...'),
-                    SearchResult(url='https://untrusted.example.org/b', title='B', snippet='...'),
+                    SearchResult(
+                        url='https://untrusted.example.org/b', title='B', snippet='...'
+                    ),
                 ]
             ),
         )
@@ -96,7 +98,11 @@ class TestDomainAllowList:
             caller_agent='market_agent',
             allowed_domains=ALLOWED,
             engine=_fake_engine(
-                [SearchResult(url='https://www.example.com/a', title='A', snippet='...')]
+                [
+                    SearchResult(
+                        url='https://www.example.com/a', title='A', snippet='...'
+                    )
+                ]
             ),
         )
         assert len(results) == 1
@@ -115,7 +121,9 @@ class TestDefaultEngine:
     def test_no_engine_raises_external_service_error(self) -> None:
         with pytest.raises(ToolExternalServiceError):
             run_search(
-                'F&B sector outlook', caller_agent='market_agent', allowed_domains=ALLOWED
+                'F&B sector outlook',
+                caller_agent='market_agent',
+                allowed_domains=ALLOWED,
             )
 
 

@@ -99,12 +99,14 @@ def calculate(
     missing = [name for name in spec.required_inputs if name not in inputs]
     if missing:
         raise ToolInputError(
-            f'Missing required input(s) for {formula_id!r} {spec.version}: '
-            f'{missing}'
+            f'Missing required input(s) for {formula_id!r} {spec.version}: {missing}'
         )
 
     input_hash = hashlib.sha256(
-        json.dumps({'formula_id': formula_id, 'version': spec.version, **inputs}, sort_keys=True).encode()
+        json.dumps(
+            {'formula_id': formula_id, 'version': spec.version, **inputs},
+            sort_keys=True,
+        ).encode()
     ).hexdigest()
     started = time.monotonic()
 
@@ -112,11 +114,19 @@ def calculate(
         value = _run_with_timeout(spec.compute, inputs)
     except ToolInputError:
         _log(
-            input_hash, None, started, 'input_error', caller_agent, workflow_id, audit_sink
+            input_hash,
+            None,
+            started,
+            'input_error',
+            caller_agent,
+            workflow_id,
+            audit_sink,
         )
         raise
     except ToolTimeoutError:
-        _log(input_hash, None, started, 'timeout', caller_agent, workflow_id, audit_sink)
+        _log(
+            input_hash, None, started, 'timeout', caller_agent, workflow_id, audit_sink
+        )
         raise
     except ToolExternalServiceError:
         _log(
@@ -135,7 +145,13 @@ def calculate(
     )
     output_hash = hashlib.sha256(result.model_dump_json().encode()).hexdigest()
     _log(
-        input_hash, output_hash, started, 'success', caller_agent, workflow_id, audit_sink
+        input_hash,
+        output_hash,
+        started,
+        'success',
+        caller_agent,
+        workflow_id,
+        audit_sink,
     )
     return result
 

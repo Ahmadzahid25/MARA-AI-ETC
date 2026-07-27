@@ -182,10 +182,11 @@ class RecommendationAgent:
             if value is None
         ]
         if missing:
+            missing_list = ', '.join(missing)
             return RecommendationOutput(
                 document_id=document_id,
                 missing_inputs=missing,
-                withheld_reason=f'Recommendation withheld pending: {", ".join(missing)}',
+                withheld_reason=f'Recommendation withheld pending: {missing_list}',
             )
         assert compliance_checklist is not None
         assert financial_analysis is not None

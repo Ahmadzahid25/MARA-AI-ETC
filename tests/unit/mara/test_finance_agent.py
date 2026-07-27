@@ -35,7 +35,9 @@ def _field(name: str, value: str, confidence: float = 0.95) -> ExtractedField:
 def _record(*fields: ExtractedField) -> DocumentExtractionRecord:
     return DocumentExtractionRecord(
         document_id='doc-1',
-        classification=DocumentClassification(document_type='financial_statement', confidence=0.9),
+        classification=DocumentClassification(
+            document_type='financial_statement', confidence=0.9
+        ),
         fields=list(fields),
     )
 
@@ -166,7 +168,9 @@ class TestAnalyze:
         )
 
         assert analysis.product_term_citations == [
-            PolicyCitation(document_id='prod-1', version='v1', locator='2', relevance=0.8)
+            PolicyCitation(
+                document_id='prod-1', version='v1', locator='2', relevance=0.8
+            )
         ]
 
     @pytest.mark.asyncio
@@ -174,9 +178,7 @@ class TestAnalyze:
         mock_response = MagicMock()
         mock_response.choices = [
             MagicMock(
-                message=MagicMock(
-                    content='{"assessment": "solid", "confidence": 0.88}'
-                )
+                message=MagicMock(content='{"assessment": "solid", "confidence": 0.88}')
             )
         ]
         mock_llm = MagicMock()

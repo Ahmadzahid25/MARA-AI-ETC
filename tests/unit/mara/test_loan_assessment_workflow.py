@@ -61,9 +61,13 @@ async def _fake_credibility(source_url, snippet):
     return 0.9
 
 
-def _fake_risk_assessor(financial_risk=0.2, compliance_risk=0.1, market_risk=0.2, confidence=0.9):
+def _fake_risk_assessor(
+    financial_risk=0.2, compliance_risk=0.1, market_risk=0.2, confidence=0.9
+):
     async def assessor(compliance, finance, market):
-        return ComponentRiskScores(financial_risk, compliance_risk, market_risk, confidence)
+        return ComponentRiskScores(
+            financial_risk, compliance_risk, market_risk, confidence
+        )
 
     return assessor
 
@@ -75,7 +79,9 @@ def _fake_recommender(decision=RecommendationDecision.APPROVE, confidence=0.9):
     return recommender
 
 
-def _initial_state(compliance_requirements: list[str] | None = None) -> LoanAssessmentState:
+def _initial_state(
+    compliance_requirements: list[str] | None = None,
+) -> LoanAssessmentState:
     return {
         'document_id': 'doc-1',
         'pdf_bytes': _blank_pdf_bytes(),
@@ -124,7 +130,9 @@ def _compiled_graph(
             allowed_domains=frozenset({'example.com'}),
         ),
         risk_agent=RiskAgent(assessor=risk_assessor or _fake_risk_assessor()),
-        recommendation_agent=RecommendationAgent(recommender=recommender or _fake_recommender()),
+        recommendation_agent=RecommendationAgent(
+            recommender=recommender or _fake_recommender()
+        ),
     )
     return graph.compile(checkpointer=InMemorySaver())
 
@@ -135,7 +143,8 @@ async def _approve_through_happy_path(compiled, config, requirements=None):
         Command(resume={'status': 'approved', 'actor': 'officer-1'}), config=config
     )  # confirm_extraction
     await compiled.ainvoke(
-        Command(resume={'status': 'approved', 'actor': 'finance-officer'}), config=config
+        Command(resume={'status': 'approved', 'actor': 'finance-officer'}),
+        config=config,
     )  # financial_sign_off
     await compiled.ainvoke(
         Command(resume={'status': 'approved', 'actor': 'risk-officer'}), config=config
@@ -144,7 +153,8 @@ async def _approve_through_happy_path(compiled, config, requirements=None):
         Command(resume={'status': 'approved', 'actor': 'case-owner'}), config=config
     )  # recommendation_approval
     return await compiled.ainvoke(
-        Command(resume={'status': 'approved', 'actor': 'committee-secretary'}), config=config
+        Command(resume={'status': 'approved', 'actor': 'committee-secretary'}),
+        config=config,
     )  # publish_approval
 
 
@@ -179,7 +189,9 @@ class TestHappyPath:
         assert result['market_brief'] is not None
 
     @pytest.mark.asyncio
-    async def test_no_hard_violation_skips_compliance_acknowledgment_interrupt(self) -> None:
+    async def test_no_hard_violation_skips_compliance_acknowledgment_interrupt(
+        self,
+    ) -> None:
         compiled = _compiled_graph()
         config = {'configurable': {'thread_id': 'wf-3'}}
 
@@ -205,7 +217,12 @@ class TestExtractionRejection:
             Command(resume={'status': 'rejected', 'actor': 'officer-1'}), config=config
         )
 
-        assert result['stage_log'] == ['document_extraction', 'validation', 'confirm_extraction', 'completion']
+        assert result['stage_log'] == [
+            'document_extraction',
+            'validation',
+            'confirm_extraction',
+            'completion',
+        ]
         assert result['compliance_checklist'] is None
         assert result['financial_analysis'] is None
         assert result['market_brief'] is None
@@ -222,7 +239,8 @@ class TestFinancialSignOffRejection:
             Command(resume={'status': 'approved', 'actor': 'officer-1'}), config=config
         )
         result = await compiled.ainvoke(
-            Command(resume={'status': 'rejected', 'actor': 'finance-officer'}), config=config
+            Command(resume={'status': 'rejected', 'actor': 'finance-officer'}),
+            config=config,
         )
 
         assert result['stage_log'][-1] == 'completion'
@@ -253,7 +271,9 @@ class TestHardComplianceViolation:
         )
         config = {'configurable': {'thread_id': 'wf-6'}}
 
-        await compiled.ainvoke(_initial_state(['valid business registration']), config=config)
+        await compiled.ainvoke(
+            _initial_state(['valid business registration']), config=config
+        )
         result = await compiled.ainvoke(
             Command(resume={'status': 'approved', 'actor': 'officer-1'}), config=config
         )
@@ -269,19 +289,24 @@ class TestHardComplianceViolation:
         )
         config = {'configurable': {'thread_id': 'wf-7'}}
 
-        await compiled.ainvoke(_initial_state(['valid business registration']), config=config)
+        await compiled.ainvoke(
+            _initial_state(['valid business registration']), config=config
+        )
         await compiled.ainvoke(
             Command(resume={'status': 'approved', 'actor': 'officer-1'}), config=config
         )
         # Resolve both pending interrupts (acknowledgment + financial sign-off).
         await compiled.ainvoke(
-            Command(resume={'status': 'halted', 'actor': 'compliance-officer'}), config=config
+            Command(resume={'status': 'halted', 'actor': 'compliance-officer'}),
+            config=config,
         )
         result = await compiled.ainvoke(
-            Command(resume={'status': 'approved', 'actor': 'finance-officer'}), config=config
+            Command(resume={'status': 'approved', 'actor': 'finance-officer'}),
+            config=config,
         )
         result = await compiled.ainvoke(
-            Command(resume={'status': 'approved', 'actor': 'risk-officer'}), config=config
+            Command(resume={'status': 'approved', 'actor': 'risk-officer'}),
+            config=config,
         )
 
         assert result['stage_log'][-1] == 'completion'
@@ -299,7 +324,9 @@ class TestHardComplianceViolation:
         )
         config = {'configurable': {'thread_id': 'wf-8'}}
 
-        await compiled.ainvoke(_initial_state(['valid business registration']), config=config)
+        await compiled.ainvoke(
+            _initial_state(['valid business registration']), config=config
+        )
         await compiled.ainvoke(
             Command(resume={'status': 'approved', 'actor': 'officer-1'}), config=config
         )
@@ -308,10 +335,12 @@ class TestHardComplianceViolation:
             config=config,
         )
         await compiled.ainvoke(
-            Command(resume={'status': 'approved', 'actor': 'finance-officer'}), config=config
+            Command(resume={'status': 'approved', 'actor': 'finance-officer'}),
+            config=config,
         )
         result = await compiled.ainvoke(
-            Command(resume={'status': 'approved', 'actor': 'risk-officer'}), config=config
+            Command(resume={'status': 'approved', 'actor': 'risk-officer'}),
+            config=config,
         )
 
         assert result['risk_rating'] is not None
