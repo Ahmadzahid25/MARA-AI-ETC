@@ -277,7 +277,6 @@ def build_loan_assessment_graph(
     async def _compliance_check_node(state: LoanAssessmentState) -> dict:
         record = state['extraction_record']
         assert record is not None
-        # No ledger passed here — see "Citation verification is not wired
         checklist = await compliance_agent.check_compliance(
             state['document_id'],
             record,

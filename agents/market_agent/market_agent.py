@@ -28,16 +28,23 @@ Cached-market-data lookup goes through the real Milestone-2
 ``services.knowledge_service.contract.KnowledgeBackend`` /
 ``tools.rag.rag_tool.rag_query`` boundary, the same one
 ``agents/compliance_agent/policy_lookup.py`` and ``agents/finance_agent``
-use. §9.7's low-trust-tier provisional visibility (a cached market finding
-readable before Knowledge Owner approval) has no equivalent in
-``shared/schemas/knowledge.py``'s ``RetrievalFilters`` yet — that filter
-dimension doesn't exist upstream — so this agent currently only ever reads
-already-approved market data, same as any other corpus query. Writing a
-freshly-gathered brief back into Knowledge Memory has the same gap in the
-other direction: ``KnowledgeBackend`` is read-only (one method,
+use. §9.7's low-trust tier now exists upstream: ``TrustTier`` on every
+chunk, ``RetrievalFilters.include_provisional`` to ask for it, and
+``may_read_provisional_knowledge`` on this agent's profile — the only
+profile granted it. ``tools/rag/rag_tool.py`` enforces both directions, so
+Risk and Recommendation are structurally unable to read unapproved market
+findings rather than merely expected not to. Cached market data also now
+carries §9.7's freshness window; a cache entry past it is withheld and
+``RetrievalResult.needs_fresh_search()`` reports that a live search is the
+correct response rather than an empty-corpus finding.
+
+Still open in the other direction: writing a freshly-gathered brief back
+into Knowledge Memory. ``KnowledgeBackend`` is read-only (one method,
 ``retrieve()``), so there is no ingestion path to bind ``cache_writer`` to
-yet. Both are real, open follow-ups, not silently dropped requirements —
-see this package's README.
+yet, and nothing in this system writes ``TrustTier.PROVISIONAL`` content
+today — the read-side boundary is built and enforced ahead of the writer
+that will populate it. A real, open follow-up, not a silently dropped
+requirement — see this package's README.
 """
 
 from __future__ import annotations

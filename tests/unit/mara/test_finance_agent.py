@@ -20,6 +20,7 @@ from shared.schemas.documents import (
     ExtractionSource,
 )
 from shared.schemas.finance import FigureProvenance
+from shared.schemas.knowledge import TrustTier
 
 
 def _field(name: str, value: str, confidence: float = 0.95) -> ExtractedField:
@@ -152,6 +153,7 @@ class TestAnalyze:
             relevance=0.8,
             document_kind=DocumentKind.PRODUCT_TERMS,
             sensitivity=SensitivityClass.INTERNAL,
+            trust_tier=TrustTier.APPROVED,
         )
 
         class StubBackend:
@@ -169,7 +171,11 @@ class TestAnalyze:
 
         assert analysis.product_term_citations == [
             PolicyCitation(
-                document_id='prod-1', version='v1', locator='2', relevance=0.8
+                document_id='prod-1',
+                version='v1',
+                locator='2',
+                relevance=0.8,
+                trust_tier=TrustTier.APPROVED,
             )
         ]
 

@@ -150,6 +150,17 @@ class AgentProfile(BaseModel):
         'docs/architecture/05-agent-architecture.md §5.7 and the '
         'network-policy enforcement in §11.7.',
     )
+    may_read_provisional_knowledge: bool = Field(
+        default=False,
+        description='§9.7: whether this profile may retrieve the low-trust tier '
+        '— content written into Knowledge Memory but not yet approved by a '
+        'Knowledge Owner. Defaults False, so a new profile is barred until '
+        'someone decides otherwise rather than inheriting the grant. True for '
+        'the Market Agent alone, and it is the same grant as external_egress '
+        'viewed from the other side: the agent that gathers uncontrolled '
+        'external content is the only one allowed to read it back before a '
+        'human has reviewed it.',
+    )
     llm_tier_override: ModelTier | None = Field(
         default=None,
         description='Only for profiles outside AgentName, which have no entry '
@@ -204,6 +215,13 @@ AGENT_PROFILES: dict[str, AgentProfile] = {
         confidence_threshold=0.7,
         approval=ApprovalRequirement.NONE,
         external_egress=True,
+        # §9.7: this agent writes the market-data cache, so it is the one that
+        # may read its own findings back before a Knowledge Owner has approved
+        # them. Granting it here and nowhere else is what keeps Risk and
+        # Recommendation — the two profiles whose output drives a lending
+        # decision — structurally unable to consume unreviewed internet-sourced
+        # material, rather than merely expected not to.
+        may_read_provisional_knowledge=True,
     ),
     AgentName.RECOMMENDATION.value: AgentProfile(
         autonomy=AutonomyLevel.BOUNDED,

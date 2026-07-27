@@ -23,6 +23,7 @@ from shared.schemas.knowledge import (
     RetrievalResult,
     RetrievedChunk,
     SensitivityClass,
+    TrustTier,
 )
 from tools.rag.rag_tool import ALLOWED_CALLERS, TOOL_NAME, rag_query
 
@@ -34,6 +35,7 @@ CHUNK = RetrievedChunk(
     relevance=0.91,
     document_kind=DocumentKind.POLICY,
     sensitivity=SensitivityClass.INTERNAL,
+    trust_tier=TrustTier.APPROVED,
 )
 
 

@@ -19,7 +19,7 @@ from shared.schemas.compliance import (
     ComplianceStatus,
 )
 from shared.schemas.finance import FigureProvenance, FinancialAnalysis, FinancialFigure
-from shared.schemas.knowledge import PolicyCitation
+from shared.schemas.knowledge import PolicyCitation, TrustTier
 from shared.schemas.market import MarketBrief, MarketClaim
 from shared.schemas.recommendation import RecommendationDecision, RecommendationOutput
 from shared.schemas.risk import RiskRating, RiskStatus
@@ -38,7 +38,10 @@ def _inputs(
                 requirement='valid business registration',
                 status=ComplianceStatus.PASS,
                 policy_citation=PolicyCitation(
-                    document_id='pol-1', version='v3', locator='4.2'
+                    document_id='pol-1',
+                    version='v3',
+                    locator='4.2',
+                    trust_tier=TrustTier.APPROVED,
                 ),
                 notes='Confirmed current.',
             )

@@ -83,22 +83,39 @@ Each milestone ships something an officer can actually use, per [01-vision.md](0
 > (real incomplete/escalation handling, reuses `composite_risk_score`) are
 > built and unit-tested, all wired to the Milestone 2 Knowledge Service
 > boundary (`KnowledgeBackend`/`RetrievalQuery`) rather than an
-> ad hoc shape. §9.7's market-data low-trust tier is **not yet
-> implemented** — `shared/schemas/knowledge.py`'s `RetrievalFilters` has no
-> filter dimension for it yet, so the Market Agent currently only reads
-> already-approved corpus content, and there is no ingestion path at all
+> ad hoc shape. §9.7's market-data low-trust tier is now
+> **implemented on the read side and enforced**: `TrustTier` is a required
+> field on `RetrievedChunk` and `PolicyCitation` (no default, so no
+> construction site can omit it and no backend can launder unreviewed
+> content in by forgetting to map it); `RetrievalFilters.include_provisional`
+> opts in; and `may_read_provisional_knowledge` in
+> `shared/agent_profiles/` grants that opt-in to the Market Agent alone.
+> `tools/rag/rag_tool.py` enforces it in both directions — an ungranted
+> caller cannot request the tier, and cannot receive it even when the
+> backend returns it regardless, which is the check that carries the control
+> given Dify's filtering is configuration we send rather than code we own.
+> Withheld chunks are excluded from the `ProvenanceLedger`, so §6.1
+> verification and §9.7 containment compose instead of cancelling out.
+> Freshness is enforced too (90 days default, per-sector override,
+> undated market data treated as expired). Each of these was verified by
+> mutation — disabling the enforcement makes specific tests in
+> `tests/unit/mara/test_knowledge_trust_tier.py` fail.
+> **Still not true:** there is no ingestion path at all
 > yet for writing a freshly-gathered brief back into Knowledge Memory
-> (`KnowledgeBackend` is read-only). **Not yet true, and explicitly called
-> out as launch preconditions by §6.6, not follow-on hardening:** a real
-> search provider, free-text PII/name detection in the query sanitizer, and
-> — the other mandatory control — Kubernetes network-policy egress
-> enforcement restricting the Market Agent's pod specifically
-> (`infrastructure/AGENTS.md`'s Market Agent egress item;
-> `infrastructure/k8s/` is still a README stub). This milestone's
-> acceptance criteria — including the red-team query-sanitization test and
-> the low-trust-tier market-data check — cannot be closed until the network
-> policy exists, the low-trust tier is implemented, and a real security
-> review has run.
+> (`KnowledgeBackend` is read-only), so nothing writes provisional content
+> today — the containment boundary is built ahead of the writer that will
+> populate it. The other ACCB Mandatory Change 1 control, Kubernetes
+> network-policy egress enforcement restricting the Market Agent's pod, now
+> exists as `infrastructure/k8s/market-agent-egress-networkpolicy.yaml` and
+> is no longer a README stub. **Not yet true, and explicitly called out as
+> launch preconditions by §6.6, not follow-on hardening:** a real search
+> provider, and free-text PII/name detection in the query sanitizer (the
+> allow-list and structured sanitization are real; free-text name detection
+> is not). This milestone's acceptance criteria therefore still cannot be
+> closed — the red-team query-sanitization test needs the free-text
+> detection it is meant to exercise, and no real security review has run.
+> The low-trust-tier market-data check is the one part now demonstrable, and
+> only for reads.
 
 ## 14.6 Milestone 4 — Full Loan Assessment workflow
 
@@ -124,12 +141,16 @@ Each milestone ships something an officer can actually use, per [01-vision.md](0
 > README.md`). **Not yet true:** Planner is not wired to actually dispatch
 > a selected template (a Gateway/`services/supervisor_service` integration
 > task); `supervisor_service`'s retry/circuit-breaker policy is not called
-> from the workflow's own node boundaries yet; citation verification
-> (`ProvenanceLedger`) is not wired into the workflow for a structural
-> reason documented in its own README (agents are constructed once,
-> outside the graph, not per-task); and — unchanged from Milestones 0–3 —
-> none of this has run against a real `postgres-primary` checkpointer, only
-> `InMemorySaver`. This milestone's acceptance criteria — a real pilot
+> from the workflow's own node boundaries yet; and — unchanged from
+> Milestones 0–3 — none of this has run against a real `postgres-primary`
+> checkpointer, only `InMemorySaver`. **Now true, corrected from an earlier
+> revision of this note:** citation verification (`ProvenanceLedger`) *is*
+> wired into both workflows. The structural obstacle recorded here
+> previously — agents constructed once outside the graph, so a
+> construction-time ledger was shared across every task — was the real bug,
+> and it was fixed rather than documented around: the ledger is now passed
+> per call and each agent node constructs a fresh one, scoping verification
+> to a single agent task as §6.1 requires. This milestone's acceptance criteria — a real pilot
 > batch, and a restart drill against a real Postgres checkpointer — cannot
 > close until those exist.
 

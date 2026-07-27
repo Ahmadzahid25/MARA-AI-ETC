@@ -134,10 +134,33 @@ wrong for one of them:
   land on the right region of the right page.
 - **`PolicyCitation`** (`knowledge.py`) — points into the *policy corpus*:
   `document_id` + `version` + `locator` (clause/section) + `relevance` +
-  `superseded_on`. There is no bounding box and no page. **The version is not
-  decoration** — a compliance finding is decided against a specific policy
-  version, and an officer reviewing it needs to see which. Never render a policy
-  citation without its version.
+  `superseded_on` + `trust_tier`. There is no bounding box and no page. **The
+  version is not decoration** — a compliance finding is decided against a
+  specific policy version, and an officer reviewing it needs to see which. Never
+  render a policy citation without its version.
+
+### `trust_tier` on a policy citation must be visible
+
+`PolicyCitation.trust_tier` is `approved` or `provisional`, and there is a
+convenience method `is_provisional()`.
+
+`provisional` means **no Knowledge Owner has reviewed this source**. It exists
+because the Market Agent gathers findings from the open internet, and §9.7
+requires that unreviewed material never reaches an officer looking like
+approved corpus policy. Rendering a provisional citation the same as an
+approved one defeats the whole control at the last step — the officer would be
+weighing unreviewed web content believing it had been signed off.
+
+So: **a provisional citation must be visually distinct and labeled.** Not an
+error state — it is legitimate, readable evidence — but clearly marked as
+unreviewed, in the same way `superseded_on` is flagged without being treated as
+wrong. Wording along the lines of "source not yet reviewed by a Knowledge
+Owner" is the intent.
+
+In practice you will mostly see `approved` today: nothing in the backend writes
+provisional content yet (there is no ingestion path), so the tier is a boundary
+built ahead of the writer that will populate it. Build the rendering anyway —
+it is far cheaper now than retrofitting it the day market-data caching lands.
 
 ### Three compliance states to render, not two
 
@@ -152,6 +175,18 @@ Related: a retrieval can come back with `no_confident_match` set — candidates
 existed but none passed the relevance threshold, with `withheld_below_threshold`
 saying how many were dropped. If you surface retrieval detail anywhere, that is
 a different message from "nothing in the corpus".
+
+`RetrievalResult` carries two further counters, and they mean different things
+again — do not collapse them into one "some results were hidden" line:
+
+| Field | Meaning | What it tells the officer |
+|---|---|---|
+| `withheld_below_threshold` | Candidates scored too low | The corpus is weak on this question |
+| `withheld_unverified` | Content exists but no Knowledge Owner has approved it | Chase the approval — this is not a gap in the corpus |
+| `withheld_expired` | Cached market data aged out (90 days by default) | Nothing is wrong; a fresh search is the correct next step |
+
+`needs_fresh_search()` is true when the result is empty *because* the cache
+aged out, which is a different officer-facing message from "we found nothing".
 
 ### Stale citations
 

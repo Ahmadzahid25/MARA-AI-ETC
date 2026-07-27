@@ -16,9 +16,11 @@ from shared.schemas.documents import (
     DocumentClassification,
     DocumentExtractionRecord,
 )
-from shared.schemas.knowledge import PolicyCitation
+from shared.schemas.knowledge import PolicyCitation, TrustTier
 
-POLICY_CLAUSE = PolicyCitation(document_id='policy-1', version='v3', locator='4.2')
+POLICY_CLAUSE = PolicyCitation(
+    document_id='policy-1', version='v3', locator='4.2', trust_tier=TrustTier.APPROVED
+)
 
 
 def _record() -> DocumentExtractionRecord:
