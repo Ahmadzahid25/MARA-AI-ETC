@@ -1,7 +1,4 @@
-/**
- * Document extraction contract — mirrors shared/schemas/documents.py
- * Per docs/architecture/10-human-in-the-loop.md §10.4
- */
+import { CONFIDENCE } from '../constants';
 
 export type ExtractionSource = 'pdf_text_layer' | 'ocr';
 
@@ -40,7 +37,7 @@ export interface DocumentExtractionRecord {
 
 export function lowConfidenceFields(
   fields: ExtractedField[],
-  threshold = 0.85,
+  threshold = CONFIDENCE.HIGH_THRESHOLD,
 ): ExtractedField[] {
   return fields.filter((f) => f.confidence < threshold);
 }
@@ -48,13 +45,13 @@ export function lowConfidenceFields(
 export type ConfidenceLevel = 'green' | 'primaryDark' | 'red';
 
 export function confidenceColor(confidence: number): ConfidenceLevel {
-  if (confidence >= 0.85) return 'green';
-  if (confidence >= 0.6) return 'primaryDark';
+  if (confidence >= CONFIDENCE.HIGH_THRESHOLD) return 'green';
+  if (confidence >= CONFIDENCE.MEDIUM_THRESHOLD) return 'primaryDark';
   return 'red';
 }
 
 export function confidenceLabel(confidence: number): string {
-  if (confidence >= 0.85) return 'High';
-  if (confidence >= 0.6) return 'Medium';
-  return 'Low';
+  if (confidence >= CONFIDENCE.HIGH_THRESHOLD) return CONFIDENCE.HIGH_LABEL;
+  if (confidence >= CONFIDENCE.MEDIUM_THRESHOLD) return CONFIDENCE.MEDIUM_LABEL;
+  return CONFIDENCE.LOW_LABEL;
 }

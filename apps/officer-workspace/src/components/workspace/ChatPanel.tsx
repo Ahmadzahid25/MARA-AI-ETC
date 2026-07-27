@@ -1,30 +1,51 @@
-import { useRef, useEffect } from 'react';
-import { Button, Icon, Input, Scrollable, Typography } from '@openhands/ui';
+import { useRef, useEffect, useState } from 'react';
+import { Icon, Scrollable, Typography } from '@openhands/ui';
 import type { ChatMessage } from '../../types/workspace';
-import { MOCK_MESSAGES } from '../../mocks/mock-data';
+import { fetchMessages } from '../../services/data';
+import { UI, WORKSPACE } from '../../constants';
 
-export function ChatPanel() {
+interface ChatPanelProps {
+  onSend?: (text: string) => void;
+  uploading?: boolean;
+  onFileAttach?: () => void;
+}
+
+export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+
+  useEffect(() => {
+    fetchMessages().then(setMessages);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [MOCK_MESSAGES.length]);
+  }, [messages.length]);
+
+  const [inputValue, setInputValue] = useState('');
+
+  function handleSend() {
+    if (!inputValue.trim() || uploading) return;
+    onSend?.(inputValue);
+    setInputValue('');
+  }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
+      handleSend();
     }
   }
 
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex items-center border-b border-slate-200 bg-white/50 dark:border-[#222328] dark:bg-[#131417]/50 backdrop-blur-sm px-6 py-3.5 shadow-sm">
-        <Typography.H3 className="font-bold text-slate-900 dark:text-white">Workspace</Typography.H3>
+        <Typography.H3 className="font-bold text-slate-900 dark:text-white">{WORKSPACE.CHAT_HEADING}</Typography.H3>
       </div>
 
       <Scrollable className="flex-1 px-6 py-4">
         <div className="mx-auto max-w-3xl space-y-4">
-          {MOCK_MESSAGES.map((msg) => (
+          {messages.map((msg) => (
             <MessageBubble key={msg.id} message={msg} />
           ))}
           <div ref={messagesEndRef} />
@@ -32,36 +53,45 @@ export function ChatPanel() {
       </Scrollable>
 
       <div className="px-6 pb-6 pt-2">
-        {/*
-         * NOTE / SYSTEM GAP:
-         * @openhands/ui currently does not export a dedicated "ChatInput" or "SearchBar" component,
-         * nor does <Input /> support a pill-shaped (rounded-full) variant or interactive trailing button slots.
-         * Per application convention, we note this design system gap here and compose the required pill-shaped chat bar
-         * layout using the existing <Input /> and <Button /> primitives wrapped in a shared container.
-         */}
-        <div className="mx-auto max-w-3xl">
-          <div className="chat-input-pill flex items-center rounded-full border border-slate-200 bg-white dark:border-[#2C2E34] dark:bg-[#18191C] px-3 py-1.5 focus-within:border-indigo-500 transition-all shadow-md dark:shadow-lg">
-            <div className="flex items-center gap-2.5 pl-2 text-slate-400 dark:text-light-neutral-400">
-              <button type="button" title="Attach file" className="hover:text-slate-700 dark:hover:text-light-neutral-200 transition-colors cursor-pointer flex items-center justify-center">
-                <Icon icon="Plus" className="h-5 w-5" />
+        <div className="mx-auto max-w-3xl w-full">
+          <div className="flex items-center w-full rounded-full bg-white dark:bg-[#18191C] border border-gray-200 dark:border-gray-800 shadow-sm px-4 py-3 h-[58px] focus-within:border-indigo-500 focus-within:shadow-md transition-all">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                title={WORKSPACE.FILE_ATTACH_TITLE}
+                onClick={onFileAttach}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all cursor-pointer shrink-0"
+              >
+                <Icon icon="Plus" className="w-5 h-5" />
               </button>
-              <button type="button" title="Voice input" className="hover:text-slate-700 dark:hover:text-light-neutral-200 transition-colors cursor-pointer flex items-center justify-center">
-                <Icon icon="Mic" className="h-5 w-5" />
+              <button
+                type="button"
+                title={WORKSPACE.VOICE_INPUT_TITLE}
+                className="w-9 h-9 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-600 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50 transition-all cursor-pointer shrink-0"
+              >
+                <Icon icon="Mic" className="w-5 h-5" />
               </button>
             </div>
-            <Input
-              label=""
-              placeholder="Describe your task — e.g. Assess the loan application from Ahmad bin Abdullah"
-              className="flex-1"
+            <input
+              type="text"
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              placeholder={WORKSPACE.CHAT_PLACEHOLDER}
+              className="flex-1 min-w-0 bg-transparent border-0 outline-none focus:outline-none focus:ring-0 text-slate-900 dark:text-slate-100 text-sm font-normal placeholder:text-gray-400 dark:placeholder:text-gray-500 px-3"
               onKeyDown={handleKeyDown}
             />
-            <Button
-              variant="primary"
-              className="!min-w-0 !w-10 !h-10 !p-0 !rounded-full !bg-red-600 hover:!bg-red-700 !border-red-600 dark:!bg-red-600 dark:hover:!bg-red-500 !text-white flex items-center justify-center shrink-0 cursor-pointer shadow-sm transition-all"
-              title="Send message"
+            <button
+              type="button"
+                title={WORKSPACE.SEND_MESSAGE_TITLE}
+              onClick={handleSend}
+              disabled={uploading}
+              className="w-[42px] h-[42px] rounded-full text-white flex items-center justify-center shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow transition-all ml-1"
+              style={{ backgroundColor: UI.BRAND_ORANGE }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = UI.BRAND_ORANGE_HOVER)}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = UI.BRAND_ORANGE)}
             >
-              <Icon icon="ArrowUp" className="h-5 w-5 !text-white stroke-[1]" />
-            </Button>
+              <Icon icon="ArrowUp" className="w-5 h-5 text-white stroke-[2]" />
+            </button>
           </div>
         </div>
       </div>
@@ -97,10 +127,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             isUser ? 'text-indigo-200' : 'text-slate-400 dark:text-slate-500'
           }`}
         >
-          {new Date(message.timestamp).toLocaleTimeString('en-MY', {
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+          {new Date(message.timestamp).toLocaleTimeString(UI.LOCALE, UI.DATE_FORMAT_OPTIONS)}
         </p>
       </div>
     </div>

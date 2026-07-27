@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Tabs } from '@openhands/ui';
 import { AppLayout } from '../components/layout/AppLayout';
 import { UserManagementTab } from '../components/admin/UserManagementTab';
@@ -6,14 +6,50 @@ import { RoleConfigTab } from '../components/admin/RoleConfigTab';
 import { AgentConfigTab } from '../components/admin/AgentConfigTab';
 import { SystemSettingsTab } from '../components/admin/SystemSettingsTab';
 import {
-  MOCK_USERS,
-  MOCK_ROLES,
-  MOCK_AGENT_PROFILES,
-  MOCK_SYSTEM_SETTINGS,
-} from '../mocks/mock-data';
+  fetchUsers,
+  fetchRoles,
+  fetchAgentProfiles,
+  fetchSystemSettings,
+} from '../services/data';
+import type { AdminUser } from '../types/admin';
+import type { AdminRole } from '../types/admin';
+import type { AgentProfile } from '../types/admin';
+import type { SystemSetting } from '../types/admin';
 
 export function AdminConsolePage() {
-  const [users] = useState(MOCK_USERS);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [roles, setRoles] = useState<AdminRole[]>([]);
+  const [agents, setAgents] = useState<AgentProfile[]>([]);
+  const [settings, setSettings] = useState<SystemSetting[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const [u, r, a, s] = await Promise.all([
+        fetchUsers(),
+        fetchRoles(),
+        fetchAgentProfiles(),
+        fetchSystemSettings(),
+      ]);
+      setUsers(u);
+      setRoles(r);
+      setAgents(a);
+      setSettings(s);
+      setLoading(false);
+    }
+    load();
+  }, []);
+
+  if (loading) {
+    return (
+      <AppLayout title="Admin Console" subtitle="User / role / agent configuration">
+        <div className="flex items-center justify-center py-20">
+          <p className="text-sm text-slate-500 dark:text-slate-400">Loading...</p>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout
@@ -29,19 +65,19 @@ export function AdminConsolePage() {
 
         <Tabs.Item text="Roles" testId="tab-roles">
           <div className="mt-4">
-            <RoleConfigTab roles={MOCK_ROLES} />
+            <RoleConfigTab roles={roles} />
           </div>
         </Tabs.Item>
 
         <Tabs.Item text="Agents" testId="tab-agents">
           <div className="mt-4">
-            <AgentConfigTab agents={MOCK_AGENT_PROFILES} />
+            <AgentConfigTab agents={agents} />
           </div>
         </Tabs.Item>
 
         <Tabs.Item text="System Settings" testId="tab-settings">
           <div className="mt-4">
-            <SystemSettingsTab settings={MOCK_SYSTEM_SETTINGS} />
+            <SystemSettingsTab settings={settings} />
           </div>
         </Tabs.Item>
       </Tabs>

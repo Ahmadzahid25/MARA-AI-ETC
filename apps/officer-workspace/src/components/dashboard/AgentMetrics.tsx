@@ -1,5 +1,6 @@
 import { Typography } from '@openhands/ui';
 import type { AgentMetric } from '../../types/dashboard';
+import { CONFIDENCE } from '../../constants';
 
 interface AgentMetricsProps {
   metrics: AgentMetric[];
@@ -22,9 +23,9 @@ export function AgentMetrics({ metrics }: AgentMetricsProps) {
               <span className="font-semibold text-slate-800 dark:text-slate-200">{m.agent_name}</span>
               <span
                 className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                  m.avg_confidence >= 0.85
+                  m.avg_confidence >= CONFIDENCE.HIGH_THRESHOLD
                     ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/80 dark:text-emerald-400'
-                    : m.avg_confidence >= 0.6
+                    : m.avg_confidence >= CONFIDENCE.MEDIUM_THRESHOLD
                       ? 'bg-amber-50 text-amber-600 dark:bg-amber-950/80 dark:text-amber-400'
                       : 'bg-rose-50 text-rose-600 dark:bg-rose-950/80 dark:text-rose-400'
                 }`}
@@ -80,9 +81,9 @@ export function AgentMetrics({ metrics }: AgentMetricsProps) {
                 <td className="py-3">
                   <span
                     className={`font-semibold ${
-                      m.avg_confidence >= 0.85
+                      m.avg_confidence >= CONFIDENCE.HIGH_THRESHOLD
                         ? 'text-emerald-600 dark:text-emerald-400'
-                        : m.avg_confidence >= 0.6
+                        : m.avg_confidence >= CONFIDENCE.MEDIUM_THRESHOLD
                           ? 'text-amber-600 dark:text-amber-400'
                           : 'text-rose-600 dark:text-rose-400'
                     }`}

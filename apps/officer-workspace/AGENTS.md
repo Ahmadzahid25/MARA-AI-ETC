@@ -66,13 +66,28 @@ is the officer-facing UI. Full context, in this order:
 
 ## Current state (update your understanding — this changes over time)
 
-- ✅ Built: login (Keycloak SSO redirect flow), route guard, empty
-  authenticated workspace shell.
-- ❌ Not built yet: Officer Workspace chat/task view, Review & Approval
-  Console, Dashboard, Admin Console.
+- ✅ Built: login (Keycloak SSO redirect flow), route guard,
+  authenticated workspace shell with full AppLayout (sidebar + mobile drawer
+  + dark mode toggle).
+- ✅ Built: **Officer Workspace** — ChatPanel with message history + file/voice
+  afforances, TaskPanel with status chips + agent badges. Data fetched via
+  `src/services/data.ts` (mock fallback by default).
+- ✅ Built: **Dashboard** — stats grid, active workflow list, pending approvals
+  + risk flag summary, agent metrics table. All data via `src/services/data.ts`.
+- ✅ Built: **Review & Approval Console** — two-tab (Pending/Resolved) view,
+  ApprovalCard with Approve/Reject/Correct actions, FieldPreview with
+  confidence/citation/source links, CorrectionForm. 403 handling shows
+  gate-role messaging. Decisions submitted via `src/services/api.ts`.
+- ✅ Built: **Admin Console** — four-tab panel (Users, Roles, Agents, Settings),
+  all backed by mock data via `src/services/data.ts`.
+- ✅ Built: **API service layer** — `src/services/api.ts` with typed
+  `createAssessment()` and `submitDecision()` calls against the live
+  `POST /loans/assessments` and `POST /loans/assessments/{thread_id}/decision`
+  endpoints, including 403/503 error handling.
+- ✅ Built: **Unified data service** — `src/services/data.ts` wraps all data
+  access with mock-first fallback (`setUseMock(true/false)` to toggle).
 - ✅ **The Loan Assessment API is live.** All seven agents run behind it, with
-  six approval gates. This is the endpoint the Review & Approval Console is
-  for — you no longer have to build against a mock for the main flow.
+  six approval gates.
 
     | | |
     |---|---|
@@ -83,7 +98,7 @@ is the officer-facing UI. Full context, in this order:
   `pending_gate`, `pending_payload`, `stage_log`, and `acted_gate` on a
   decision response.
 
-- ⚠️ It will 503 until an OCR engine and document classifier are wired
+- ⚠️ API will 503 until an OCR engine and document classifier are wired
   (`tools/ocr/README.md`). Expected current state, not a bug in your call.
 
 ## Three things about the approval flow that will shape your UI
