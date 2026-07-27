@@ -58,9 +58,12 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <AppLayout title="Portfolio Overview" subtitle="Pemantauan permohonan pembiayaan & geran usahawan MARA">
+      <AppLayout title="Dashboard" subtitle="At-a-glance operational view">
         <div className="flex items-center justify-center py-20">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Loading dashboard...</p>
+          <div className="flex items-center gap-3">
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600 dark:border-slate-600 dark:border-t-indigo-400" />
+            <span className="text-sm text-slate-500 dark:text-slate-400">Loading dashboard...</span>
+          </div>
         </div>
       </AppLayout>
     );

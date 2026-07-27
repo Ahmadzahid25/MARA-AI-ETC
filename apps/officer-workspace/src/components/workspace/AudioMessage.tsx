@@ -17,13 +17,14 @@ export function AudioMessage({ message }: AudioMessageProps) {
     } else {
       audioRef.current.play();
     }
-    setPlaying(!playing);
+    setPlaying((prev) => !prev);
   }
 
   return (
     <div className="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-[#222328]">
       <button
         type="button"
+        aria-label={playing ? 'Pause audio' : 'Play audio'}
         onClick={togglePlay}
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white hover:bg-indigo-700 transition-colors cursor-pointer"
       >

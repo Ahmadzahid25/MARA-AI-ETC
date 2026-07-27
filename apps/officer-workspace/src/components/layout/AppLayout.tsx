@@ -86,7 +86,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         </div>
         <div className="mt-3 px-3 sidebar-search-input">
-          <Input label="" placeholder="Search..." start={<Icon icon="Search" />} />
+          <Input label="Search" placeholder="Search..." start={<Icon icon="Search" />} />
         </div>
         <nav className="mt-2 space-y-1 px-3">
           {NAV_ITEMS.map((item) => (
@@ -158,6 +158,7 @@ export function AppLayout({ title, subtitle, children }: AppLayoutProps) {
               <button
                 onClick={() => setMobileNavOpen(false)}
                 className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#222328]"
+                aria-label="Close menu"
                 title="Close menu"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
