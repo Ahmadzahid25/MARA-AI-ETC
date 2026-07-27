@@ -10,7 +10,9 @@ from tools.search.query_sanitizer import sanitize_query
 
 class TestStructuredPIIRemoval:
     def test_ic_number_is_stripped(self) -> None:
-        result = sanitize_query('F&B outlet run by owner with IC 990101-14-5566 in Klang Valley')
+        result = sanitize_query(
+            'F&B outlet run by owner with IC 990101-14-5566 in Klang Valley'
+        )
         assert '990101-14-5566' not in result
         assert 'F&B outlet' in result
 

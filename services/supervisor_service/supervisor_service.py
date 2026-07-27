@@ -106,7 +106,8 @@ class CircuitBreaker:
         if (
             self._state == CircuitBreakerState.OPEN
             and self._opened_at is not None
-            and datetime.now(UTC) - self._opened_at >= timedelta(seconds=self._cooldown_seconds)
+            and datetime.now(UTC) - self._opened_at
+            >= timedelta(seconds=self._cooldown_seconds)
         ):
             self._state = CircuitBreakerState.HALF_OPEN
         return self._state
@@ -158,7 +159,9 @@ async def dispatch_task(
 
     if circuit_breaker is not None and not circuit_breaker.allow_dispatch():
         _log(task_name, workflow_id, 'circuit_open', 0, audit_sink)
-        return DispatchResult(task_name=task_name, outcome=DispatchOutcome.CIRCUIT_OPEN, attempts=0)
+        return DispatchResult(
+            task_name=task_name, outcome=DispatchOutcome.CIRCUIT_OPEN, attempts=0
+        )
 
     last_error: Exception | None = None
     for attempt in range(1, max_retries + 2):  # first attempt + max_retries
@@ -184,7 +187,9 @@ async def dispatch_task(
                 value=value,
             )
 
-    _log(task_name, workflow_id, 'blocked', max_retries + 1, audit_sink, error=last_error)
+    _log(
+        task_name, workflow_id, 'blocked', max_retries + 1, audit_sink, error=last_error
+    )
     return DispatchResult(
         task_name=task_name,
         outcome=DispatchOutcome.BLOCKED,
@@ -211,7 +216,11 @@ def _log(
             output_hash=str(error) if error else None,
             latency_ms=0.0,
             outcome='success' if outcome == 'success' else 'external_error',
-            metadata={'task_name': task_name, 'dispatch_outcome': outcome, 'attempts': attempts},
+            metadata={
+                'task_name': task_name,
+                'dispatch_outcome': outcome,
+                'attempts': attempts,
+            },
         ),
         sink=audit_sink,
     )

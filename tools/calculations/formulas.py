@@ -201,8 +201,7 @@ def get_formula(formula_id: str, version: str | None = None) -> FormulaSpec:
     versions = _FORMULA_VERSIONS.get(formula_id)
     if not versions:
         raise ToolInputError(
-            f'Unknown formula_id {formula_id!r} (known: '
-            f'{sorted(_FORMULA_VERSIONS)})'
+            f'Unknown formula_id {formula_id!r} (known: {sorted(_FORMULA_VERSIONS)})'
         )
     if version is None:
         return versions[-1]

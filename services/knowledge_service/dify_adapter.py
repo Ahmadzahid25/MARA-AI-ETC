@@ -65,8 +65,8 @@ _META_LOCATOR = 'mara_locator'
 _META_DOCUMENT_KIND = 'mara_document_kind'
 _META_SENSITIVITY = 'mara_sensitivity'
 _META_OWNING_DEPARTMENT = 'mara_owning_department'
-_META_EFFECTIVE_FROM = 'mara_effective_from'   # ISO date string, YYYY-MM-DD
-_META_SUPERSEDED_ON = 'mara_superseded_on'     # ISO date string or absent
+_META_EFFECTIVE_FROM = 'mara_effective_from'  # ISO date string, YYYY-MM-DD
+_META_SUPERSEDED_ON = 'mara_superseded_on'  # ISO date string or absent
 
 
 class DifyAdapter:
@@ -148,7 +148,7 @@ class DifyAdapter:
             'retrieval_model': {
                 'search_method': 'semantic_search',
                 'top_k': fetch_k,
-                'score_threshold': 0.0,        # we apply threshold ourselves
+                'score_threshold': 0.0,  # we apply threshold ourselves
                 'score_threshold_enabled': False,
                 'reranking_enable': False,
             },
@@ -162,25 +162,31 @@ class DifyAdapter:
         if not filters.include_superseded:
             # Exclude superseded documents: only retrieve those where
             # mara_superseded_on is absent (not yet superseded).
-            metadata_conditions.append({
-                'key': _META_SUPERSEDED_ON,
-                'comparator': 'not exists',
-            })
+            metadata_conditions.append(
+                {
+                    'key': _META_SUPERSEDED_ON,
+                    'comparator': 'not exists',
+                }
+            )
 
         if filters.document_kinds:
             kind_values = [k.value for k in filters.document_kinds]
-            metadata_conditions.append({
-                'key': _META_DOCUMENT_KIND,
-                'comparator': 'in',
-                'value': kind_values,
-            })
+            metadata_conditions.append(
+                {
+                    'key': _META_DOCUMENT_KIND,
+                    'comparator': 'in',
+                    'value': kind_values,
+                }
+            )
 
         if filters.owning_department:
-            metadata_conditions.append({
-                'key': _META_OWNING_DEPARTMENT,
-                'comparator': '=',
-                'value': filters.owning_department,
-            })
+            metadata_conditions.append(
+                {
+                    'key': _META_OWNING_DEPARTMENT,
+                    'comparator': '=',
+                    'value': filters.owning_department,
+                }
+            )
 
         if metadata_conditions:
             payload['retrieval_model']['metadata_condition'] = {
@@ -230,7 +236,7 @@ class DifyAdapter:
             kept.append(chunk)
             if len(kept) == query.top_k:
                 # Count remaining as withheld (we fetched fetch_k > top_k).
-                remaining = raw_records[raw_records.index(record) + 1:]
+                remaining = raw_records[raw_records.index(record) + 1 :]
                 withheld += len(remaining)
                 break
 
@@ -241,9 +247,7 @@ class DifyAdapter:
         )
 
     @staticmethod
-    def _record_to_chunk(
-        record: dict[str, Any], score: float
-    ) -> RetrievedChunk | None:
+    def _record_to_chunk(record: dict[str, Any], score: float) -> RetrievedChunk | None:
         """Map one Dify record dict to a ``RetrievedChunk``.
 
         Returns ``None`` when required MARA metadata fields are absent

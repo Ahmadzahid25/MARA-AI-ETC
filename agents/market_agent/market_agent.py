@@ -63,7 +63,9 @@ from tools.search.search_tool import SearchEngine, run_search
 PROFILE = profile_for(AgentName.MARKET.value)
 # Sourced from the profile registry — see shared/agent_profiles/profiles.py.
 SOURCE_CREDIBILITY_THRESHOLD = confidence_threshold_for(AgentName.MARKET.value)
-LIVE_SEARCH_UNAVAILABLE_NOTE = 'Live search was unavailable; results are Knowledge Base-only.'
+LIVE_SEARCH_UNAVAILABLE_NOTE = (
+    'Live search was unavailable; results are Knowledge Base-only.'
+)
 INSUFFICIENT_DATA_NOTE = 'Insufficient external data — no credible sources found.'
 
 

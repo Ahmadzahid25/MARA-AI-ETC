@@ -100,9 +100,13 @@ def render_docx(inputs: CommitteeReportInputs) -> bytes:
             if figure.source_citation is not None
             else f'via {figure.formula_id} {figure.formula_version}'
         )
-        doc.add_paragraph(f'{figure.name}: {figure.value} ({source})', style='List Bullet')
+        doc.add_paragraph(
+            f'{figure.name}: {figure.value} ({source})', style='List Bullet'
+        )
     for citation in inputs.financial_analysis.product_term_citations:
-        doc.add_paragraph(f'Product terms: [{_citation_text(citation)}]', style='List Bullet')
+        doc.add_paragraph(
+            f'Product terms: [{_citation_text(citation)}]', style='List Bullet'
+        )
 
     doc.add_heading('Risk Rating', level=1)
     doc.add_paragraph(f'Status: {inputs.risk_rating.status.value}')
@@ -113,7 +117,9 @@ def render_docx(inputs: CommitteeReportInputs) -> bytes:
     for name, score in inputs.risk_rating.component_scores.items():
         doc.add_paragraph(f'{name}: {score:.2f}', style='List Bullet')
     for citation in inputs.risk_rating.citations:
-        doc.add_paragraph(f'Precedent: [{_citation_text(citation)}]', style='List Bullet')
+        doc.add_paragraph(
+            f'Precedent: [{_citation_text(citation)}]', style='List Bullet'
+        )
 
     doc.add_heading('Market Context', level=1)
     if inputs.market_brief.note:
@@ -133,7 +139,9 @@ def render_docx(inputs: CommitteeReportInputs) -> bytes:
         for condition in inputs.recommendation.conditions:
             doc.add_paragraph(condition, style='List Bullet')
         for citation in inputs.recommendation.precedent_citations:
-            doc.add_paragraph(f'Precedent: [{_citation_text(citation)}]', style='List Bullet')
+            doc.add_paragraph(
+                f'Precedent: [{_citation_text(citation)}]', style='List Bullet'
+            )
 
     from io import BytesIO
 
@@ -142,7 +150,9 @@ def render_docx(inputs: CommitteeReportInputs) -> bytes:
     return buffer.getvalue()
 
 
-def _add_bullet_slide(prs: Presentation, title: str, bullets: list[str], notes: str = '') -> None:
+def _add_bullet_slide(
+    prs: Presentation, title: str, bullets: list[str], notes: str = ''
+) -> None:
     layout = prs.slide_layouts[1]  # "Title and Content"
     slide = prs.slides.add_slide(layout)
     slide.shapes.title.text = title
@@ -215,7 +225,10 @@ def render_pptx(inputs: CommitteeReportInputs) -> bytes:
         _citation_text(c) for c in inputs.recommendation.precedent_citations
     )
     rec_bullets = (
-        [f'Decision: {inputs.recommendation.decision.value}', inputs.recommendation.reasoning_trail]
+        [
+            f'Decision: {inputs.recommendation.decision.value}',
+            inputs.recommendation.reasoning_trail,
+        ]
         if inputs.recommendation.decision is not None
         else ['Recommendation withheld.']
     )

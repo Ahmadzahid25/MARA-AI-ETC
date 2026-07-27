@@ -27,7 +27,8 @@ from shared.schemas.risk import RiskRating, RiskStatus
 
 def _inputs(
     *,
-    recommendation_decision: RecommendationDecision | None = RecommendationDecision.APPROVE,
+    recommendation_decision: RecommendationDecision
+    | None = RecommendationDecision.APPROVE,
     risk_status: RiskStatus = RiskStatus.COMPLETE,
 ) -> CommitteeReportInputs:
     compliance = ComplianceChecklist(
@@ -36,7 +37,9 @@ def _inputs(
             ComplianceChecklistItem(
                 requirement='valid business registration',
                 status=ComplianceStatus.PASS,
-                policy_citation=PolicyCitation(document_id='pol-1', version='v3', locator='4.2'),
+                policy_citation=PolicyCitation(
+                    document_id='pol-1', version='v3', locator='4.2'
+                ),
                 notes='Confirmed current.',
             )
         ],
@@ -103,7 +106,9 @@ class TestValidation:
     @pytest.mark.asyncio
     async def test_incomplete_risk_refuses_to_publish(self) -> None:
         with pytest.raises(MissingApprovedInputError):
-            await publish_committee_materials(_inputs(risk_status=RiskStatus.INCOMPLETE))
+            await publish_committee_materials(
+                _inputs(risk_status=RiskStatus.INCOMPLETE)
+            )
 
 
 class TestRendering:

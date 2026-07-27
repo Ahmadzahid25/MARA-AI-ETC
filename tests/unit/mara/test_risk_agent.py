@@ -47,9 +47,13 @@ def _market() -> MarketBrief:
     return MarketBrief(sector='F&B', region='Klang Valley', claims=[])
 
 
-async def _fixed_assessor(financial_risk, compliance_risk, market_risk, confidence=0.85):
+async def _fixed_assessor(
+    financial_risk, compliance_risk, market_risk, confidence=0.85
+):
     async def _assess(checklist, finance, market):
-        return ComponentRiskScores(financial_risk, compliance_risk, market_risk, confidence)
+        return ComponentRiskScores(
+            financial_risk, compliance_risk, market_risk, confidence
+        )
 
     return _assess
 

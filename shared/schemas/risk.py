@@ -1,12 +1,12 @@
 """Risk rating contract — docs/architecture/05-agent-architecture.md §5.6.
 
-    Outputs: "Risk rating with component breakdown (financial, compliance,
-    market risk) and citations to each contributing agent's output."
-    Failure handling: "If any required upstream agent output is missing,
-    the risk rating is marked 'incomplete — pending [X]' rather than
-    computed on a partial picture."
-    Confidence threshold: "0.8; below this the rating is presented as a
-    range/qualitative flag rather than a single score."
+Outputs: "Risk rating with component breakdown (financial, compliance,
+market risk) and citations to each contributing agent's output."
+Failure handling: "If any required upstream agent output is missing,
+the risk rating is marked 'incomplete — pending [X]' rather than
+computed on a partial picture."
+Confidence threshold: "0.8; below this the rating is presented as a
+range/qualitative flag rather than a single score."
 """
 
 from __future__ import annotations

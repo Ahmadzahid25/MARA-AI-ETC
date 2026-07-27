@@ -38,7 +38,8 @@ documented simplification `workflows/document_assessment` already made for
 its own single gate ("real re-run routing per §7.4 is a later refinement")
 — not a new shortcut invented here.
 
-### A genuine, unresolved tension: acknowledged hard violations still withhold a recommendation
+### Unresolved tension: an acknowledged hard violation still withholds
+### a recommendation
 
 §7.4 says an acknowledged hard violation (accepted as a documented
 exception) lets Risk/Recommendation "proceed." §5.8's own escalation rule
@@ -249,7 +250,9 @@ def build_loan_assessment_graph(
             updates['extraction_record'] = record.model_copy(
                 update={
                     'fields': [
-                        f.model_copy(update={'value': by_name[f.name], 'confidence': 1.0})
+                        f.model_copy(
+                            update={'value': by_name[f.name], 'confidence': 1.0}
+                        )
                         if f.name in by_name
                         else f
                         for f in record.fields
@@ -295,7 +298,10 @@ def build_loan_assessment_graph(
                 'compliance_checklist': checklist.model_dump(mode='json'),
             }
         )
-        return {'compliance_decision': decision, 'stage_log': ['compliance_acknowledgment']}
+        return {
+            'compliance_decision': decision,
+            'stage_log': ['compliance_acknowledgment'],
+        }
 
     async def _finance_analysis_node(state: LoanAssessmentState) -> dict:
         record = state['extraction_record']
@@ -333,7 +339,9 @@ def build_loan_assessment_graph(
         return {'risk_rating': rating, 'stage_log': ['risk_synthesis']}
 
     def _make_simple_gate(
-        gate_type: str, decision_key: str, payload_fn: Callable[[LoanAssessmentState], dict]
+        gate_type: str,
+        decision_key: str,
+        payload_fn: Callable[[LoanAssessmentState], dict],
     ):
         async def node(state: LoanAssessmentState) -> dict:
             payload = {'type': gate_type, 'document_id': state['document_id']}
@@ -343,7 +351,9 @@ def build_loan_assessment_graph(
 
         return node
 
-    def _route_on(decision_key: str, next_node: str) -> Callable[[LoanAssessmentState], str]:
+    def _route_on(
+        decision_key: str, next_node: str
+    ) -> Callable[[LoanAssessmentState], str]:
         def route(state: LoanAssessmentState) -> str:
             decision = state.get(decision_key) or {}
             return next_node if decision.get('status') == 'approved' else 'completion'
@@ -353,10 +363,14 @@ def build_loan_assessment_graph(
     _financial_sign_off_node = _make_simple_gate(
         'financial_sign_off',
         'financial_decision',
-        lambda s: {'financial_analysis': s['financial_analysis'].model_dump(mode='json')},
+        lambda s: {
+            'financial_analysis': s['financial_analysis'].model_dump(mode='json')
+        },
     )
     _risk_review_node = _make_simple_gate(
-        'risk_review', 'risk_decision', lambda s: {'risk_rating': s['risk_rating'].model_dump(mode='json')}
+        'risk_review',
+        'risk_decision',
+        lambda s: {'risk_rating': s['risk_rating'].model_dump(mode='json')},
     )
     _recommendation_approval_node = _make_simple_gate(
         'recommendation_approval',

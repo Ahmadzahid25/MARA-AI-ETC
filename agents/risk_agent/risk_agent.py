@@ -112,10 +112,13 @@ def _build_assessment_prompt(
     market_brief: MarketBrief,
 ) -> str:
     compliance_text = (
-        'HARD VIOLATION PRESENT' if compliance_checklist.has_hard_violation else 'no hard violation'
+        'HARD VIOLATION PRESENT'
+        if compliance_checklist.has_hard_violation
+        else 'no hard violation'
     )
     figures_text = '\n'.join(
-        f'- {f.name}: {f.value} ({f.provenance.value})' for f in financial_analysis.figures
+        f'- {f.name}: {f.value} ({f.provenance.value})'
+        for f in financial_analysis.figures
     )
     claims_text = '\n'.join(
         f'- {c.claim} (credibility {c.credibility_score})' for c in market_brief.claims
@@ -140,7 +143,12 @@ def _parse_assessment(raw_content: str) -> ComponentRiskScores:
         raw = json.loads(raw_content)
         values = {
             key: float(raw[key])
-            for key in ('financial_risk', 'compliance_risk', 'market_risk', 'confidence')
+            for key in (
+                'financial_risk',
+                'compliance_risk',
+                'market_risk',
+                'confidence',
+            )
         }
     except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
         raise RiskAssessmentParsingError(
@@ -148,9 +156,7 @@ def _parse_assessment(raw_content: str) -> ComponentRiskScores:
         ) from exc
     for key, value in values.items():
         if not 0.0 <= value <= 1.0:
-            raise RiskAssessmentParsingError(
-                f'{key} {value} out of range [0.0, 1.0]'
-            )
+            raise RiskAssessmentParsingError(f'{key} {value} out of range [0.0, 1.0]')
     return ComponentRiskScores(**values)
 
 

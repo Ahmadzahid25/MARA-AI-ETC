@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from datetime import timezone
 
 # Windows asyncio fix (must be before any async imports)
 if sys.platform == 'win32':
@@ -46,13 +45,13 @@ CALIBRATION_WORKFLOW_ID = '00000000-0000-0000-0000-000000000009'
 
 # ── Task 7: Audit Memory ─────────────────────────────────────────
 
+
 async def verify_audit_memory(settings) -> bool:
-    print(f"\n{SEPARATOR}")
+    print(f'\n{SEPARATOR}')
     print('TASK 7 — Audit Memory write/read (audit_memory table)')
     print(SEPARATOR)
 
     async with audit_pool(settings) as pool:
-
         # 1. Write
         event = AuditEvent(
             workflow_id=AUDIT_WORKFLOW_ID,
@@ -61,7 +60,7 @@ async def verify_audit_memory(settings) -> bool:
             event_type='approval',
             payload={'note': 'infrastructure verification — Task 7', 'milestone': 0},
         )
-        print(f"\n[1] Writing AuditEvent -> audit_memory ...")
+        print('\n[1] Writing AuditEvent -> audit_memory ...')
         await write_audit_event(pool, event)
         print('    WRITE: OK')
 
@@ -94,7 +93,9 @@ async def verify_audit_memory(settings) -> bool:
         if row.occurred_at.tzinfo is None:
             print('\n    WARN: occurred_at has no timezone info')
         else:
-            print(f"\n    PASS: occurred_at is tz-aware ({row.occurred_at.tzinfo}) — DB-set timestamp confirmed")
+            print(
+                f'\n    PASS: occurred_at is tz-aware ({row.occurred_at.tzinfo}) — DB-set timestamp confirmed'
+            )
 
         # 4. Verify id was set by DB (GENERATED ALWAYS AS IDENTITY)
         if row.id is None:
@@ -102,19 +103,21 @@ async def verify_audit_memory(settings) -> bool:
             return False
         print(f'    PASS: id={row.id} — IDENTITY column confirmed')
 
-        print('\n[PASS] TASK 7 PASSED -- audit_memory write path works against real Postgres')
+        print(
+            '\n[PASS] TASK 7 PASSED -- audit_memory write path works against real Postgres'
+        )
         return True
 
 
 # ── Task 9: Long-term Memory Calibration ─────────────────────────
 
+
 async def verify_calibration_memory(settings) -> bool:
-    print(f"\n{SEPARATOR}")
+    print(f'\n{SEPARATOR}')
     print('TASK 9 — Calibration Memory write/read (long_term_memory_calibration table)')
     print(SEPARATOR)
 
     async with calibration_pool(settings) as pool:
-
         # 1. Write — two events to test aggregation
         events = [
             CalibrationEvent(
@@ -135,13 +138,15 @@ async def verify_calibration_memory(settings) -> bool:
             ),
         ]
 
-        print(f"\n[1] Writing 2 CalibrationEvents -> long_term_memory_calibration ...")
+        print('\n[1] Writing 2 CalibrationEvents -> long_term_memory_calibration ...')
         for ev in events:
             await write_calibration_event(pool, ev)
         print('    WRITE: OK (2 rows)')
 
         # 2. Read back raw rows
-        print(f"\n[2] Reading raw rows for workflow_id = '{CALIBRATION_WORKFLOW_ID}' ...")
+        print(
+            f"\n[2] Reading raw rows for workflow_id = '{CALIBRATION_WORKFLOW_ID}' ..."
+        )
         raw_rows = await pool.fetch(
             'SELECT * FROM long_term_memory_calibration WHERE workflow_id = $1',
             CALIBRATION_WORKFLOW_ID,
@@ -153,9 +158,11 @@ async def verify_calibration_memory(settings) -> bool:
 
         print(f'    READ: OK — got {len(raw_rows)} row(s)')
         for r in raw_rows:
-            print(f"      id={r['id']}  field={r['field_name']}  "
-                  f"confidence={r['stated_confidence']}  corrected={r['was_corrected']}  "
-                  f"recorded_at={r['recorded_at']}")
+            print(
+                f'      id={r["id"]}  field={r["field_name"]}  '
+                f'confidence={r["stated_confidence"]}  corrected={r["was_corrected"]}  '
+                f'recorded_at={r["recorded_at"]}'
+            )
 
         # 3. Verify recorded_at is DB-set
         for r in raw_rows:
@@ -165,30 +172,47 @@ async def verify_calibration_memory(settings) -> bool:
         print('\n    PASS: recorded_at is DB-set for all rows')
 
         # 4. Aggregate stats
-        print(f"\n[3] Querying calibration stats for agent='DocumentAgent' ...")
+        print("\n[3] Querying calibration stats for agent='DocumentAgent' ...")
         stats = await query_calibration_stats(pool, 'DocumentAgent')
-        print(f"    total_events                   = {stats.total_events}")
-        print(f"    corrected_events               = {stats.corrected_events}")
-        print(f"    correction_rate                = {stats.correction_rate:.1%}" if stats.correction_rate is not None else '    correction_rate = None')
-        print(f"    average_stated_confidence      = {stats.average_stated_confidence:.2f}" if stats.average_stated_confidence else '    avg_confidence = None')
-        print(f"    avg_confidence_when_corrected  = {stats.average_confidence_when_corrected:.2f}" if stats.average_confidence_when_corrected else '    avg_corr_conf = None')
+        print(f'    total_events                   = {stats.total_events}')
+        print(f'    corrected_events               = {stats.corrected_events}')
+        print(
+            f'    correction_rate                = {stats.correction_rate:.1%}'
+            if stats.correction_rate is not None
+            else '    correction_rate = None'
+        )
+        print(
+            f'    average_stated_confidence      = {stats.average_stated_confidence:.2f}'
+            if stats.average_stated_confidence
+            else '    avg_confidence = None'
+        )
+        print(
+            f'    avg_confidence_when_corrected  = {stats.average_confidence_when_corrected:.2f}'
+            if stats.average_confidence_when_corrected
+            else '    avg_corr_conf = None'
+        )
 
         # Sanity checks on aggregated values
         if stats.total_events < 2:
-            print(f"    WARN: expected >=2 total_events, got {stats.total_events}")
+            print(f'    WARN: expected >=2 total_events, got {stats.total_events}')
         if stats.corrected_events < 1:
-            print(f"    WARN: expected >=1 corrected_event, got {stats.corrected_events}")
+            print(
+                f'    WARN: expected >=1 corrected_event, got {stats.corrected_events}'
+            )
 
-        print('\n[PASS] TASK 9 PASSED -- long_term_memory_calibration write path works against real Postgres')
+        print(
+            '\n[PASS] TASK 9 PASSED -- long_term_memory_calibration write path works against real Postgres'
+        )
         return True
 
 
 # ── Main ─────────────────────────────────────────────────────────
 
+
 async def main() -> None:
     settings = get_settings()
     print('\nMara infrastructure verification — Audit & Calibration Memory')
-    print(f"DSN: {settings.database.primary_dsn}")
+    print(f'DSN: {settings.database.primary_dsn}')
 
     task7_ok = False
     task9_ok = False
@@ -204,7 +228,7 @@ async def main() -> None:
         print(f'\n[FAIL] TASK 9 EXCEPTION: {type(exc).__name__}: {exc}')
 
     # -- Summary ---------------------------------------------------
-    print(f"\n{SEPARATOR}")
+    print(f'\n{SEPARATOR}')
     print('SUMMARY')
     print(SEPARATOR)
     print(f'  Task 7 -- Audit Memory:        {"PASSED" if task7_ok else "FAILED"}')

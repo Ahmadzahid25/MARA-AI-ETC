@@ -105,7 +105,10 @@ async def publish_committee_materials(
 
 
 def _log(
-    document_id: str, workflow_id: str | None, outcome: str, audit_sink: AuditSink | None
+    document_id: str,
+    workflow_id: str | None,
+    outcome: str,
+    audit_sink: AuditSink | None,
 ) -> None:
     log_tool_invocation(
         ToolInvocationLog(

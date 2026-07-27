@@ -182,7 +182,11 @@ class TestDispatchWithCircuitBreaker:
             raise ToolExternalServiceError('down')
 
         await dispatch_task(
-            't1', always_fails, max_retries=0, retry_backoff_seconds=0.0, circuit_breaker=breaker
+            't1',
+            always_fails,
+            max_retries=0,
+            retry_backoff_seconds=0.0,
+            circuit_breaker=breaker,
         )
 
         assert breaker.state == CircuitBreakerState.OPEN
@@ -209,7 +213,11 @@ class TestAuditLogging:
             raise ToolExternalServiceError('down')
 
         await dispatch_task(
-            't1', always_fails, max_retries=0, retry_backoff_seconds=0.0, audit_sink=entries.append
+            't1',
+            always_fails,
+            max_retries=0,
+            retry_backoff_seconds=0.0,
+            audit_sink=entries.append,
         )
 
         assert len(entries) == 1
