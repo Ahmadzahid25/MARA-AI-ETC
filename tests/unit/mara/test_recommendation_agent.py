@@ -14,6 +14,7 @@ from shared.schemas.compliance import (
     ComplianceStatus,
 )
 from shared.schemas.finance import FinancialAnalysis
+from shared.schemas.knowledge import TrustTier
 from shared.schemas.market import MarketBrief
 from shared.schemas.recommendation import RecommendationDecision
 from shared.schemas.risk import RiskRating, RiskStatus
@@ -199,6 +200,7 @@ class TestNormalRecommendation:
             relevance=0.8,
             document_kind=DocumentKind.PRECEDENT,
             sensitivity=SensitivityClass.INTERNAL,
+            trust_tier=TrustTier.APPROVED,
         )
 
         class StubBackend:

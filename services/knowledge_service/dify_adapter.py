@@ -51,6 +51,7 @@ from shared.schemas.knowledge import (
     RetrievalResult,
     RetrievedChunk,
     SensitivityClass,
+    TrustTier,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,8 @@ _META_SENSITIVITY = 'mara_sensitivity'
 _META_OWNING_DEPARTMENT = 'mara_owning_department'
 _META_EFFECTIVE_FROM = 'mara_effective_from'  # ISO date string, YYYY-MM-DD
 _META_SUPERSEDED_ON = 'mara_superseded_on'  # ISO date string or absent
+_META_TRUST_TIER = 'mara_trust_tier'  # §9.7: 'approved' | 'provisional'
+_META_CACHED_AT = 'mara_cached_at'  # ISO date string; market data only
 
 
 class DifyAdapter:
@@ -188,6 +191,22 @@ class DifyAdapter:
                 }
             )
 
+        if not filters.include_provisional:
+            # §9.7. Narrowing here is an efficiency measure, not the control —
+            # tools/rag/rag_tool.py re-checks every returned chunk's tier and
+            # withholds anything provisional regardless of what this condition
+            # did. That duplication is deliberate: this condition depends on
+            # ingestion having written mara_trust_tier correctly and on Dify
+            # honouring the filter, and neither is something this system can
+            # verify from here.
+            metadata_conditions.append(
+                {
+                    'key': _META_TRUST_TIER,
+                    'comparator': '=',
+                    'value': TrustTier.APPROVED.value,
+                }
+            )
+
         if metadata_conditions:
             payload['retrieval_model']['metadata_condition'] = {
                 'logical_operator': 'and',
@@ -293,6 +312,26 @@ class DifyAdapter:
             except ValueError:
                 pass
 
+        cached_at: date | None = None
+        if raw_ca := metadata.get(_META_CACHED_AT):
+            try:
+                cached_at = date.fromisoformat(raw_ca)
+            except ValueError:
+                pass
+
+        # §9.7, and the one mapping in this method that must not be lenient.
+        # Every other unparseable field here degrades to a usable default, but
+        # an unreadable trust tier is precisely the case the tier exists for:
+        # content whose approval status cannot be established has, as far as this
+        # system can prove, not been approved. Absent metadata, a misspelled
+        # value, and a value from a future schema version all land on
+        # PROVISIONAL — which keeps it out of Risk and Recommendation rather than
+        # letting an ingestion bug quietly promote unreviewed material.
+        try:
+            trust_tier = TrustTier(metadata.get(_META_TRUST_TIER))
+        except ValueError:
+            trust_tier = TrustTier.PROVISIONAL
+
         return RetrievedChunk(
             document_id=document_id,
             version=version,
@@ -301,9 +340,11 @@ class DifyAdapter:
             relevance=min(max(score, 0.0), 1.0),
             document_kind=doc_kind,
             sensitivity=sensitivity,
+            trust_tier=trust_tier,
             owning_department=metadata.get(_META_OWNING_DEPARTMENT),
             effective_from=effective_from,
             superseded_on=superseded_on,
+            cached_at=cached_at,
         )
 
     async def aclose(self) -> None:

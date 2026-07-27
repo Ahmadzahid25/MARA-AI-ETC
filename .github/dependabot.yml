@@ -1,12 +1,41 @@
+# Dependabot configuration.
+#
+# Tuned on 2026-07-27 after the bot opened 12 pull requests in a single day and
+# pushed a broken eslint bump (#23) onto main. Three things were driving the
+# volume, and all three are config, not bad luck:
+#
+#   1. `interval: daily` on the two busiest ecosystems (pip / and npm /frontend).
+#   2. `github-actions` and `docker` had no `groups:` at all, so every single
+#      action got its own pull request — five of them in one batch. Worse, with
+#      `directories:` listing three paths, the *same* bump opened one PR per
+#      directory: docker/login-action 4.1.0 -> 4.4.0 arrived as two separate
+#      PRs (#34 and #39), as did docker/metadata-action (#36 and #38).
+#   3. A single `version-all` group mixing majors with minors. One breaking
+#      major poisons the whole PR: #26 bundled 37 updates, of which only
+#      @heroui/react 2.8.8 -> 3.2.2 was breaking (18 tsc errors across 10
+#      files), and the other 36 perfectly good bumps could not land because of
+#      it. That PR never went green, got superseded by #30, and the cycle
+#      restarts.
+#
+# The shape below: group aggressively, split majors from minors so the safe
+# bulk can merge on its own, and slow the cadence to weekly. Security updates
+# keep their own group in every ecosystem so they are never slowed down or
+# blocked behind a stuck version-update PR.
+#
+# The three groups repeated in every ecosystem below are deliberately written
+# out rather than shared via a YAML anchor — dependabot validates this file
+# against a closed schema, so the extra top-level key an anchor would need is
+# not worth the risk of the whole config failing to load.
 version: 2
 updates:
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
     cooldown:
       default-days: 7
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     groups:
       # put packages in their own group if they have a history of breaking the build or needing to be reverted
       pre-commit:
@@ -22,39 +51,60 @@ updates:
         applies-to: "security-updates"
         patterns:
           - "*"
-      version-all:
+      version-minor:
         applies-to: "version-updates"
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      version-major:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "major"
 
   # pip ecosystem entry for /enterprise removed with enterprise/ (ACCB Condition C-3)
 
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
     cooldown:
       default-days: 7
-    open-pull-requests-limit: 5
-    # frontend/ lints through eslint-config-airbnb + eslint-config-airbnb-typescript,
-    # in the legacy .eslintrc format. Neither config has a release that accepts a
-    # newer major, so these three majors cannot be installed at all — `npm ci`
-    # fails to resolve before any lint rule runs:
+    open-pull-requests-limit: 3
+    # These majors cannot be installed at all — they are not a question of
+    # review effort, they fail before any check runs. Each one is pinned by a
+    # config package that has no release accepting a newer major:
     #
-    #   eslint-config-airbnb@19.0.4 (latest published) peers eslint ^7.32.0 || ^8.2.0
-    #   eslint-config-airbnb-typescript@18.0.0        peers @typescript-eslint/* ^7.0.0
+    #   eslint-config-airbnb@19.0.4 (the last version ever published)
+    #     peers eslint ^7.32.0 || ^8.2.0          -> blocks eslint 9 and 10
+    #   eslint-config-airbnb-typescript@18.0.0
+    #     peers @typescript-eslint/* ^7.0.0       -> blocks ts-eslint 8
     #
-    # Adopting them means replacing the airbnb config stack and migrating
-    # .eslintrc to flat config — a deliberate piece of work, not a dependency
-    # bump. Until someone does that, these majors are unmergeable by
-    # construction, so don't spend a PR slot re-proposing them. Minors and
-    # patches (including the rest of the eslint group) still flow normally.
+    # On top of the peer conflict, frontend/.eslintrc is the legacy eslintrc
+    # format extending "airbnb"/"airbnb-typescript" by name, and neither config
+    # ships a flat-config export — which eslint 10 requires. Adopting these is
+    # an airbnb-stack replacement plus a flat-config migration.
+    #
+    # @heroui/react 3.x is a different kind of blocked: it installs fine but
+    # breaks the source. Verified locally against #26 — Tooltip dropped the
+    # `content` and `placement` props, AutocompleteItem/AutocompleteSection are
+    # no longer exported, `isVirtualized` is gone, and Button lost the "flat"
+    # variant. 18 tsc errors across 10 files. That is a UI migration, so it
+    # should arrive as a deliberate PR, not inside a 38-package group.
+    #
+    # Minors and patches for all four keep flowing; only the majors are held.
     ignore:
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
       - dependency-name: "@typescript-eslint/eslint-plugin"
         update-types: ["version-update:semver-major"]
       - dependency-name: "@typescript-eslint/parser"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@heroui/react"
         update-types: ["version-update:semver-major"]
     groups:
       docusaurus:
@@ -67,10 +117,19 @@ updates:
         applies-to: "security-updates"
         patterns:
           - "*"
-      version-all:
+      version-minor:
         applies-to: "version-updates"
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      version-major:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "major"
 
   - package-ecosystem: "npm"
     directory: "/docs"
@@ -79,7 +138,7 @@ updates:
       day: "wednesday"
     cooldown:
       default-days: 7
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
     groups:
       docusaurus:
         patterns:
@@ -91,10 +150,19 @@ updates:
         applies-to: "security-updates"
         patterns:
           - "*"
-      version-all:
+      version-minor:
         applies-to: "version-updates"
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      version-major:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "major"
 
   - package-ecosystem: "github-actions"
     directories:
@@ -105,7 +173,29 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    # Without these groups every action bump was its own PR, and an action used
+    # in more than one of the directories above opened one PR per directory for
+    # the identical version change. Grouping collapses that into a single
+    # "across N directories" PR.
+    groups:
+      security-all:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      version-minor:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      version-major:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "major"
 
   - package-ecosystem: "docker"
     directories:
@@ -114,4 +204,22 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      security-all:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+      version-minor:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      version-major:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "major"

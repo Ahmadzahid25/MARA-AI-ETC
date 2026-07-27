@@ -263,9 +263,14 @@ class TestHardComplianceViolation:
             a fabrication and gets rejected. Recording keeps this double
             faithful to what `make_rag_policy_lookup` actually does.
             """
-            from shared.schemas.knowledge import PolicyCitation
+            from shared.schemas.knowledge import PolicyCitation, TrustTier
 
-            citation = PolicyCitation(document_id='pol-1', version='v1', locator='1')
+            citation = PolicyCitation(
+                document_id='pol-1',
+                version='v1',
+                locator='1',
+                trust_tier=TrustTier.APPROVED,
+            )
             if ledger is not None:
                 ledger.record_returned('rag_query', (citation.to_citable_ref(),))
             return [citation]
@@ -385,12 +390,24 @@ class TestCitationVerificationIsLive:
         """
 
         async def lookup(requirement: str, ledger=None):
-            from shared.schemas.knowledge import PolicyCitation
+            from shared.schemas.knowledge import PolicyCitation, TrustTier
 
-            retrieved = PolicyCitation(document_id='pol-1', version='v1', locator='1')
+            retrieved = PolicyCitation(
+                document_id='pol-1',
+                version='v1',
+                locator='1',
+                trust_tier=TrustTier.APPROVED,
+            )
             if ledger is not None:
                 ledger.record_returned('rag_query', (retrieved.to_citable_ref(),))
-            return [PolicyCitation(document_id='pol-1', version='v1', locator='9.9')]
+            return [
+                PolicyCitation(
+                    document_id='pol-1',
+                    version='v1',
+                    locator='9.9',
+                    trust_tier=TrustTier.APPROVED,
+                )
+            ]
 
         async def checker(requirement, citations, record):
             return ComplianceStatus.PASS, 'Satisfied.'

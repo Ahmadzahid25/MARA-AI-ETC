@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import pytest
 
@@ -17,6 +17,7 @@ from shared.schemas.knowledge import (
     RetrievalResult,
     RetrievedChunk,
     SensitivityClass,
+    TrustTier,
 )
 from tools.search.search_tool import SearchResult
 
@@ -89,6 +90,12 @@ class TestGatherMarketContext:
             relevance=0.7,
             document_kind=DocumentKind.MARKET_DATA,
             sensitivity=SensitivityClass.INTERNAL,
+            trust_tier=TrustTier.APPROVED,
+            # §9.7: market data carries a freshness window, so a cache entry
+            # that is meant to be usable has to be dated. Without cached_at the
+            # RAG tool cannot establish this finding's age and withholds it —
+            # covered by test_market_data_freshness below.
+            cached_at=date.today(),
         )
         agent = MarketAgent(
             credibility_assessor=_fake_credibility,

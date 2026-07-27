@@ -27,6 +27,7 @@ from shared.schemas.knowledge import (
     RetrievalResult,
     RetrievedChunk,
     SensitivityClass,
+    TrustTier,
 )
 
 CLAUSE = RetrievedChunk(
@@ -37,6 +38,7 @@ CLAUSE = RetrievedChunk(
     relevance=0.93,
     document_kind=DocumentKind.POLICY,
     sensitivity=SensitivityClass.INTERNAL,
+    trust_tier=TrustTier.APPROVED,
 )
 
 
@@ -94,7 +96,11 @@ async def test_checklist_cites_the_retrieved_clause_with_its_version() -> None:
 
     citation = checklist.items[0].policy_citation
     assert citation == PolicyCitation(
-        document_id='policy-1', version='v3', locator='4.2', relevance=0.93
+        document_id='policy-1',
+        version='v3',
+        locator='4.2',
+        relevance=0.93,
+        trust_tier=TrustTier.APPROVED,
     )
 
 
@@ -133,7 +139,14 @@ async def test_a_fabricated_citation_is_rejected_before_the_checklist_returns() 
         # Retrieval genuinely happens — so the ledger is populated — but the
         # citation attached to the finding names a different clause.
         await make_rag_policy_lookup(backend)(requirement, ledger)
-        return [PolicyCitation(document_id='policy-1', version='v3', locator='9.9')]
+        return [
+            PolicyCitation(
+                document_id='policy-1',
+                version='v3',
+                locator='9.9',
+                trust_tier=TrustTier.APPROVED,
+            )
+        ]
 
     agent = ComplianceAgent(policy_lookup=_fabricating_lookup, checker=_passing_checker)
 
@@ -164,6 +177,7 @@ def test_a_superseded_citation_is_flagged_as_stale() -> None:
         version='v3',
         locator='4.2',
         superseded_on=date(2026, 1, 31),
+        trust_tier=TrustTier.APPROVED,
     )
 
     assert cited.is_stale_as_of(date(2026, 3, 1)) is True
@@ -173,6 +187,11 @@ def test_a_superseded_citation_is_flagged_as_stale() -> None:
 
 
 def test_a_current_citation_is_not_stale() -> None:
-    current = PolicyCitation(document_id='policy-1', version='v4', locator='4.2')
+    current = PolicyCitation(
+        document_id='policy-1',
+        version='v4',
+        locator='4.2',
+        trust_tier=TrustTier.APPROVED,
+    )
 
     assert current.is_stale_as_of(date(2026, 3, 1)) is False

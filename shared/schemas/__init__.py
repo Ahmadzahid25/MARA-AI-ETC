@@ -19,6 +19,7 @@ from shared.schemas.documents import (
 )
 from shared.schemas.finance import FigureProvenance, FinancialAnalysis, FinancialFigure
 from shared.schemas.knowledge import (
+    MARKET_DATA_FRESHNESS_DAYS,
     DocumentKind,
     PolicyCitation,
     RetrievalFilters,
@@ -26,6 +27,7 @@ from shared.schemas.knowledge import (
     RetrievalResult,
     RetrievedChunk,
     SensitivityClass,
+    TrustTier,
 )
 from shared.schemas.market import MarketBrief, MarketClaim
 from shared.schemas.planning import PlanResult, WorkflowTemplate
@@ -65,6 +67,7 @@ __all__ = [
     'MarketBrief',
     'MarketClaim',
     'PlanResult',
+    'MARKET_DATA_FRESHNESS_DAYS',
     'PolicyCitation',
     'RecommendationDecision',
     'RecommendationOutput',
@@ -75,6 +78,7 @@ __all__ = [
     'RiskRating',
     'RiskStatus',
     'SensitivityClass',
+    'TrustTier',
     'ToolError',
     'ToolExternalServiceError',
     'ToolInputError',

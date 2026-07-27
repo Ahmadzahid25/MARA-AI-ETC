@@ -11,6 +11,7 @@ from shared.schemas.compliance import (
     ComplianceStatus,
 )
 from shared.schemas.finance import FinancialAnalysis
+from shared.schemas.knowledge import TrustTier
 from shared.schemas.market import MarketBrief
 from shared.schemas.risk import RiskStatus
 
@@ -181,6 +182,7 @@ class TestPrecedentCitations:
             relevance=0.75,
             document_kind=DocumentKind.PRECEDENT,
             sensitivity=SensitivityClass.INTERNAL,
+            trust_tier=TrustTier.APPROVED,
         )
 
         class StubBackend:
