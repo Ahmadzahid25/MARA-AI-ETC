@@ -1,5 +1,4 @@
-import type { DocumentExtractionRecord } from '../types/documents';
-import type { ApprovalRequest, FieldCorrection } from '../types/approval';
+import type { FieldCorrection } from '../types/approval';
 import type { ChatMessage, Task } from '../types/workspace';
 import type {
   DashboardStats,
@@ -13,6 +12,7 @@ import {
   createAssessment as apiCreateAssessment,
   submitDecision as apiSubmitDecision,
   ApiError,
+  type AssessmentResponse,
   type CreateAssessmentInput,
   type DecisionInput,
 } from './api';
@@ -56,32 +56,27 @@ export async function startAssessment(
   return { threadId: res.thread_id, pendingGate: res.pending_gate };
 }
 
+export async function startAssessmentFull(
+  input: CreateAssessmentInput,
+): Promise<AssessmentResponse> {
+  return apiCreateAssessment(input);
+}
+
 // ─── Review Console ────────────────────────────────────────────
-
-export async function fetchApprovalRequests(): Promise<ApprovalRequest[]> {
-  throw new Error('API not implemented for approval requests');
-}
-
-export async function fetchExtraction(
-  _documentId: string,
-): Promise<DocumentExtractionRecord> {
-  throw new Error('API not implemented for document extraction');
-}
 
 export async function submitGateDecision(
   threadId: string,
   action: 'approve' | 'reject' | 'correct',
   reason?: string,
   corrections?: FieldCorrection[],
-): Promise<{ success: boolean; actedGate: string | null }> {
+): Promise<AssessmentResponse> {
   const input: DecisionInput = { action, reason };
   if (corrections) input.corrections = corrections.map((c) => ({
     field_name: c.field_name,
     corrected_value: c.corrected_value,
     reason: c.reason,
   }));
-  const res = await apiSubmitDecision(threadId, input);
-  return { success: true, actedGate: res.acted_gate };
+  return apiSubmitDecision(threadId, input);
 }
 
 export function extractGateRole(detail: string): string | null {

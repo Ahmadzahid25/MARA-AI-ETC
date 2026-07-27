@@ -1,11 +1,10 @@
 import { useRef, useEffect, useState } from 'react';
 import { Icon, Scrollable, Typography } from '@openhands/ui';
 import type { ChatMessage } from '../../types/workspace';
-import { fetchMessages } from '../../services/data';
 import { UI, WORKSPACE } from '../../constants';
 
 interface ChatPanelProps {
-  onSend?: (text: string) => void;
+  onSend?: (text: string) => Promise<string | void> | void;
   uploading?: boolean;
   onFileAttach?: () => void;
 }
@@ -15,19 +14,36 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   useEffect(() => {
-    fetchMessages().then(setMessages);
-  }, []);
-
-  useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages.length]);
 
   const [inputValue, setInputValue] = useState('');
 
-  function handleSend() {
+  async function handleSend() {
     if (!inputValue.trim() || uploading) return;
-    onSend?.(inputValue);
+
+    const text = inputValue;
     setInputValue('');
+
+    const userMsg: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      role: 'user',
+      content: text,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, userMsg]);
+
+    const response = await onSend?.(text);
+    if (response) {
+      const assistantMsg: ChatMessage = {
+        id: `msg-${Date.now()}-resp`,
+        role: 'assistant',
+        content: response,
+        timestamp: new Date().toISOString(),
+        agent_name: 'Planner Agent',
+      };
+      setMessages((prev) => [...prev, assistantMsg]);
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
