@@ -119,8 +119,12 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
+# Environments & Secrets (NEVER COMMIT SENSITIVE KEYS)
 .env
+.env.local
+.env.*
+!.env.example
+!*.env.example
 frontend/.env
 .venv
 env/
