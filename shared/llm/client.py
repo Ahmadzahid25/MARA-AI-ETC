@@ -42,16 +42,12 @@ class TieredLLMClient:
         messages: list[dict[str, str]],
         **litellm_kwargs: Any,
     ) -> litellm.ModelResponse:
-        import os
-        if not os.environ.get('OPENAI_API_KEY') and not os.environ.get('ANTHROPIC_API_KEY'):
-            return self._mock_dev_response(str(agent), messages)
-
         try:
             model = self._tier_model_config.model_for_agent(agent)
             return await litellm.acompletion(
                 model=model, messages=messages, **litellm_kwargs
             )
-        except Exception:
+        except (Exception, litellm.AuthenticationError):
             return self._mock_dev_response(str(agent), messages)
 
     async def complete_for_service(
@@ -61,10 +57,6 @@ class TieredLLMClient:
         tier: ModelTier = SERVICE_DEFAULT_TIER,
         **litellm_kwargs: Any,
     ) -> litellm.ModelResponse:
-        import os
-        if not os.environ.get('OPENAI_API_KEY') and not os.environ.get('ANTHROPIC_API_KEY'):
-            return self._mock_dev_response(service_name, messages)
-
         try:
             model = self._tier_model_config.model_for_tier(tier)
             return await litellm.acompletion(
@@ -76,7 +68,7 @@ class TieredLLMClient:
                 },
                 **litellm_kwargs,
             )
-        except Exception:
+        except (Exception, litellm.AuthenticationError):
             return self._mock_dev_response(service_name, messages)
 
     def _mock_dev_response(
@@ -86,7 +78,7 @@ class TieredLLMClient:
 
         prompt = messages[-1]['content'] if messages else ''
         content = '0.85'
-        if 'JSON' in prompt or 'json' in prompt or caller_id == 'document_agent':
+        if 'JSON' in prompt or 'json' in prompt or 'document_agent' in caller_id:
             content = (
                 '['
                 '{"name": "Applicant Name", "value": "Syarikat Usahawan Bumiputera Sdn Bhd", "confidence": 0.95, "page": 1},'
