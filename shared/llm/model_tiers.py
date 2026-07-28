@@ -83,7 +83,16 @@ class TierModelConfig(BaseModel):
         ModelTier.HIGH_STAKES: 'anthropic/claude-opus-4-8',
     }
 
+    openai_model_by_tier: dict[ModelTier, str] = {
+        ModelTier.EXTRACTION: 'gpt-4o-mini',
+        ModelTier.SYNTHESIS: 'gpt-4o',
+        ModelTier.HIGH_STAKES: 'gpt-4o',
+    }
+
     def model_for_tier(self, tier: ModelTier) -> str:
+        import os
+        if os.environ.get('OPENAI_API_KEY') and not os.environ.get('ANTHROPIC_API_KEY'):
+            return self.openai_model_by_tier.get(tier, 'gpt-4o')
         return self.model_by_tier[tier]
 
     def model_for_agent(self, agent: AgentName) -> str:
@@ -91,3 +100,4 @@ class TierModelConfig(BaseModel):
 
 
 DEFAULT_TIER_MODEL_CONFIG = TierModelConfig()
+

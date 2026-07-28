@@ -1,6 +1,5 @@
 import { Button } from '@openhands/ui';
-import { login, loginMock } from '../services/auth';
-import { enableDevMode } from '../services/dev-auth';
+import { login } from '../services/auth';
 
 const FEATURES = [
   {
@@ -42,11 +41,6 @@ const FEATURES = [
 ];
 
 export function LoginPage() {
-  function handleDevMode() {
-    enableDevMode();
-    loginMock();
-  }
-
   return (
     <div className="flex min-h-screen w-full bg-white text-slate-900">
       {/* Left branding panel */}
@@ -116,21 +110,6 @@ export function LoginPage() {
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
-            </Button>
-
-            <div className="flex items-center gap-3 py-1">
-              <div className="h-px flex-1 bg-slate-200" />
-              <span className="text-xs text-slate-400">atau</span>
-              <div className="h-px flex-1 bg-slate-200" />
-            </div>
-
-            <Button
-              variant="secondary"
-              onClick={handleDevMode}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50"
-            >
-              <span className="text-amber-500">⚡</span>
-              <span>Log Masuk Pegawai (Mod Pembangunan / Mock)</span>
             </Button>
           </div>
 

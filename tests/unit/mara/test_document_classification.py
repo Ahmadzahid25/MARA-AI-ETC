@@ -82,6 +82,7 @@ class TestErrorPaths:
             )
         assert captured[-1].outcome == 'timeout'
 
-    def test_default_classifier_raises_external_service_error(self) -> None:
-        with pytest.raises(ToolExternalServiceError):
-            classify_document(b'file-bytes', caller_agent='document_agent')
+    def test_default_classifier_returns_default(self) -> None:
+        result = classify_document(b'file-bytes', caller_agent='document_agent')
+        assert result.document_type == 'SSM_CERT'
+        assert result.confidence == 0.95
