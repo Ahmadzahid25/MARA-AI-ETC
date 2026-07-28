@@ -14,15 +14,21 @@ const STAGE_STATUS_CONFIG: Record<
 
 const STAGE_STATUS_DEFAULT = { label: 'Pending', color: 'gray' as const, dot: 'bg-slate-300 dark:bg-slate-600' };
 
-function stageLabel(stage: string): string {
+function stageLabel(stage: string | undefined | null): string {
+  if (!stage) return 'Stage';
   return stage
     .replace(/^extract_/, '')
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function StageRow({ entry }: { entry: StageLogEntry }) {
-  const config = STAGE_STATUS_CONFIG[entry.status] ?? STAGE_STATUS_DEFAULT;
+function StageRow({ entry }: { entry: StageLogEntry | string | any }) {
+  const stageName = typeof entry === 'string' ? entry : entry?.stage;
+  const statusStr = typeof entry === 'string' ? 'completed' : (entry?.status ?? 'completed');
+  const agentName = typeof entry === 'string' ? '' : entry?.agent;
+  const completedAt = typeof entry === 'string' ? null : entry?.completed_at;
+
+  const config = STAGE_STATUS_CONFIG[statusStr] ?? STAGE_STATUS_DEFAULT;
 
   return (
     <div className="flex items-start gap-3 px-3 py-2">
@@ -32,18 +38,20 @@ function StageRow({ entry }: { entry: StageLogEntry }) {
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Typography.Text fontSize="s" fontWeight={600} className="text-slate-800 dark:text-slate-200">
-            {stageLabel(entry.stage)}
+            {stageLabel(stageName)}
           </Typography.Text>
           <Chip color={config.color} variant="pill">
             {config.label}
           </Chip>
         </div>
-        <Typography.Text fontSize="xxs" className="text-slate-400 dark:text-slate-500">
-          {entry.agent}
-        </Typography.Text>
-        {entry.completed_at && (
+        {agentName && (
           <Typography.Text fontSize="xxs" className="text-slate-400 dark:text-slate-500">
-            {new Date(entry.completed_at).toLocaleTimeString()}
+            {agentName}
+          </Typography.Text>
+        )}
+        {completedAt && (
+          <Typography.Text fontSize="xxs" className="text-slate-400 dark:text-slate-500">
+            {new Date(completedAt).toLocaleTimeString()}
           </Typography.Text>
         )}
       </div>

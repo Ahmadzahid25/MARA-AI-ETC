@@ -161,6 +161,11 @@ async def start_loan_assessment(
         result = await workflow.ainvoke(initial_state, config=config)
     except ToolError as exc:
         raise to_http_exception(exc) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f'Workflow execution error: {exc}',
+        ) from exc
 
     return serialize_loan_result(document_id, result)
 

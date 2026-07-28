@@ -113,6 +113,7 @@ services:
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin-dev-only
+      KC_PROXY_HEADERS: xforwarded
       KC_DB: dev-file # dev-only; production Keycloak must use its own managed Postgres,
       # NOT postgres-primary or postgres-dify above (see docs/architecture/
       # 04-technology-stack.md §4.4 — Keycloak is reused directly, but as its

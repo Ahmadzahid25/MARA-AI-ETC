@@ -52,10 +52,13 @@ export function WorkspacePage() {
   async function handleSend(text: string): Promise<string> {
     setUploading(true);
     try {
+      const dummyPdfContent = '%PDF-1.4\n1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n2 0 obj <</Type /Pages /Count 1 /Kids [3 0 R]>> endobj\n3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources <</Font <</F1 4 0 R>>>> /Contents 5 0 R>> endobj\n4 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n5 0 obj <</Length 68>> stream\nBT\n/F1 12 Tf\n100 700 Td\n(Permohonan Pembiayaan Pinjaman Usahawan MARA) Tj\nET\nendstream endobj\nxref\n0 6\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \n0000000230 00000 n \n0000000302 00000 n \ntrailer <</Size 6 /Root 1 0 R>>\nstartxref\n420\n%%EOF\n';
+      const mockFile = new File([dummyPdfContent], UI.PLACEHOLDER_MOCK_FILE_NAME, { type: 'application/pdf' });
       const res = await startAssessmentFull({
-        file: new File([], UI.PLACEHOLDER_MOCK_FILE_NAME),
+        file: mockFile,
         sector: UI.DEFAULT_SECTOR,
         region: UI.DEFAULT_REGION,
+        product_query: text,
       });
       addAssessment({
         thread_id: res.thread_id,

@@ -92,8 +92,17 @@ def _source_for_page(pages: list[ParsedPage], page: int) -> ExtractionSource:
 def _parse_llm_fields(
     raw_content: str, document_id: str, pages: list[ParsedPage]
 ) -> list[ExtractedField]:
+    content = (raw_content or '').strip()
+    if content.startswith('```json'):
+        content = content[7:]
+    if content.startswith('```'):
+        content = content[3:]
+    if content.endswith('```'):
+        content = content[:-3]
+    content = content.strip()
+
     try:
-        raw_fields = json.loads(raw_content)
+        raw_fields = json.loads(content)
     except json.JSONDecodeError as exc:
         raise ExtractionParsingError(f'Model output was not valid JSON: {exc}') from exc
 
