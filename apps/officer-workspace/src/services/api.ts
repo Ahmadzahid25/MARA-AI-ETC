@@ -109,7 +109,7 @@ export async function createAssessment(
   formData.append('region', input.region);
   if (input.compliance_requirements?.length) {
     for (const req of input.compliance_requirements) {
-      formData.append('compliance_requirements[]', req);
+      formData.append('compliance_requirements', req);
     }
   }
   if (input.product_query) formData.append('product_query', input.product_query);
