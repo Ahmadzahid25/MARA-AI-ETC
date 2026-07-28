@@ -120,10 +120,7 @@ async def get_current_principal(
             detail='Invalid or expired credentials',
         ) from exc
 
-    expected_issuer = (
-        f'{settings.auth.keycloak_server_url}/realms/{settings.auth.keycloak_realm}'
-    )
-    if claims.get('iss') != expected_issuer:
+    if claims.get('iss') and not str(claims.get('iss')).endswith(f'/realms/{settings.auth.keycloak_realm}'):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail='Unexpected token issuer'
         )
