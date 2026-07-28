@@ -117,7 +117,7 @@ async def get_current_principal(
         # unhandled 500 instead of the documented 401.
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid or expired credentials',
+            detail=f'Invalid or expired credentials: {exc}',
         ) from exc
 
     if claims.get('iss') and not str(claims.get('iss')).endswith(f'/realms/{settings.auth.keycloak_realm}'):
