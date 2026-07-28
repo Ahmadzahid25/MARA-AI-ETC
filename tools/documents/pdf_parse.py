@@ -124,7 +124,10 @@ def parse_pdf(
         reader = _read_pdf(pdf_bytes)
         pages: list[ParsedPage] = []
         for index, pdf_page in enumerate(reader.pages, start=1):
-            text = (pdf_page.extract_text() or '').strip()
+            try:
+                text = (pdf_page.extract_text() or '').strip()
+            except Exception:
+                text = ''
             source = ExtractionSource.PDF_TEXT_LAYER
 
             if not text and page_image_renderer is not None and ocr_engine is not None:
