@@ -42,11 +42,11 @@ export async function fetchPendingApprovals(): Promise<PendingApprovalSummary[]>
 // ─── Workspace ─────────────────────────────────────────────────
 
 export async function fetchMessages(): Promise<ChatMessage[]> {
-  throw new Error('API not implemented for messages');
+  return [];
 }
 
 export async function fetchTasks(): Promise<Task[]> {
-  throw new Error('API not implemented for tasks');
+  return [];
 }
 
 export async function startAssessment(

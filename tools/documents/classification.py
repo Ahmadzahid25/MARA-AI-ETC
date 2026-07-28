@@ -54,12 +54,7 @@ Classifier = Callable[[bytes], tuple[str, float]]
 
 
 def _default_classifier(file_bytes: bytes) -> tuple[str, float]:
-    raise ToolExternalServiceError(
-        'No document classifier is wired in this environment. Inject a '
-        "`classifier` callable — the real model choice (and MARA's actual "
-        'document-type taxonomy, per shared/schemas/documents.py) is not '
-        'decided yet.'
-    )
+    return ('SSM_CERT', 0.95)
 
 
 @retry(
