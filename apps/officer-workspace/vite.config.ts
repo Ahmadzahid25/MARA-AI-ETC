@@ -35,8 +35,18 @@ export default defineConfig({
       allow: ['../..'],
     },
     proxy: {
-      // API Gateway runs on port 8051 (services/api_gateway/main.py).
-      // Rewrite strips /api prefix: frontend calls /api/healthz → gateway sees /healthz
+      '/api': {
+        target: process.env.VITE_API_GATEWAY_URL || 'http://localhost:8051',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+      },
+    },
+  },
+  preview: {
+    host: '0.0.0.0',
+    port: 4000,
+    allowedHosts: true,
+    proxy: {
       '/api': {
         target: process.env.VITE_API_GATEWAY_URL || 'http://localhost:8051',
         changeOrigin: true,
