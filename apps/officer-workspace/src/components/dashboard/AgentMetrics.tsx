@@ -15,6 +15,14 @@ export function AgentMetrics({ metrics }: AgentMetricsProps) {
         </Typography.Text>
       </div>
 
+      {metrics.length === 0 && (
+        <div className="rounded-lg border border-dashed border-slate-200 dark:border-[#2C2E34] py-8 text-center text-xs text-slate-400 dark:text-slate-500">
+          Tiada data prestasi ejen
+        </div>
+      )}
+
+      {metrics.length > 0 && (
+      <>
       {/* Mobile Card View (visible on screens < md) */}
       <div className="divide-y divide-slate-100 dark:divide-[#222328] md:hidden">
         {metrics.map((m) => (
@@ -51,7 +59,11 @@ export function AgentMetrics({ metrics }: AgentMetricsProps) {
         ))}
       </div>
 
+      </>
+      )}
+
       {/* Desktop Table View (visible on screens >= md) */}
+      {metrics.length > 0 && (
       <div className="hidden overflow-x-auto md:block">
         <table className="w-full min-w-[560px] text-left text-sm">
           <thead>
@@ -96,6 +108,7 @@ export function AgentMetrics({ metrics }: AgentMetricsProps) {
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }

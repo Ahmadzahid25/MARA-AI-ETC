@@ -16,6 +16,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [isRecording, setIsRecording] = useState(false);
   const [dictationSupported, setDictationSupported] = useState(true);
+  const [isThinking, setIsThinking] = useState(false);
 
   useEffect(() => {
     const SpeechRecognitionAPI = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -26,7 +27,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages.length]);
+  }, [messages.length, isThinking]);
 
   const [inputValue, setInputValue] = useState('');
 
@@ -35,6 +36,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
 
     const text = inputValue;
     setInputValue('');
+    setIsThinking(true);
 
     const userMsg: ChatMessage = {
       id: `msg-${Date.now()}`,
@@ -45,6 +47,7 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
     setMessages((prev) => [...prev, userMsg]);
 
     const response = await onSend?.(text);
+    setIsThinking(false);
     if (response) {
       const assistantMsg: ChatMessage = {
         id: `msg-${Date.now()}-resp`,
@@ -123,6 +126,17 @@ export function ChatPanel({ onSend, uploading, onFileAttach }: ChatPanelProps) {
             messages.map((msg) => (
               <MessageBubble key={msg.id} message={msg} />
             ))
+          )}
+          {isThinking && (
+            <div className="flex justify-start">
+              <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm dark:border-[#2C2E34] dark:bg-[#18191C]">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '0ms' }} />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '150ms' }} />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-slate-400" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
           )}
           <div ref={messagesEndRef} />
         </div>
