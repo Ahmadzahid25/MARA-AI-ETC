@@ -4,10 +4,14 @@ import { AppLayout } from '../components/layout/AppLayout';
 import { GateRenderer } from '../components/review/GateRenderer';
 import { CorrectionForm } from '../components/review/CorrectionForm';
 import { useAssessments } from '../context/AssessmentContext';
-import { submitGateDecision, extractGateRole, ApiError } from '../services/data';
 import {
-  listOfficerApplications,
-  submitOfficerApplicationDecision,
+  submitGateDecision,
+  extractGateRole,
+  ApiError,
+  fetchOfficerQueueItems,
+  submitOfficerDecision,
+} from '../services/data';
+import {
   type PendingGate,
   type V1ApplicationStatus,
   type V1OfficerDecisionAction,
@@ -29,8 +33,8 @@ export function ReviewConsolePage() {
       setQueueLoading(true);
       setQueueError(null);
       try {
-        const queue = await listOfficerApplications();
-        setQueueItems(queue.items ?? []);
+        const queue = await fetchOfficerQueueItems();
+        setQueueItems(queue);
       } catch (err) {
         if (err instanceof ApiError && err.status === 403) {
           setQueueError('Queue ini memerlukan peranan Officer/Admin.');
@@ -59,17 +63,17 @@ export function ReviewConsolePage() {
     if (queueActionLoading) return;
     setQueueActionLoading(`${applicationId}:${action}`);
     try {
-      await submitOfficerApplicationDecision(applicationId, {
+      await submitOfficerDecision(
+        applicationId,
         action,
-        reason:
-          action === 'approve'
-            ? 'Approved by officer via workspace queue'
-            : action === 'reject'
-              ? 'Rejected by officer via workspace queue'
-              : 'Additional information required by officer',
-      });
-      const queue = await listOfficerApplications();
-      setQueueItems(queue.items ?? []);
+        action === 'approve'
+          ? 'Approved by officer via workspace queue'
+          : action === 'reject'
+            ? 'Rejected by officer via workspace queue'
+            : 'Additional information required by officer',
+      );
+      const queue = await fetchOfficerQueueItems();
+      setQueueItems(queue);
     } catch (err) {
       if (err instanceof ApiError) {
         setQueueError(err.detail ?? err.message);
@@ -83,6 +87,7 @@ export function ReviewConsolePage() {
 
   function queueStatusChip(status: V1ApplicationStatus): {
     color: 'gray' | 'green' | 'red' | 'primaryDark';
+
     label: string;
   } {
     if (status === 'PROCESSING') return { color: 'primaryDark', label: 'Processing' };

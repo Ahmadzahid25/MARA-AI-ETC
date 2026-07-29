@@ -1,5 +1,5 @@
 import { Button } from '@openhands/ui';
-import { login } from '../services/auth';
+import { login, loginMock } from '../services/auth';
 
 const FEATURES = [
   {
@@ -103,13 +103,20 @@ export function LoginPage() {
           <div className="mt-6 space-y-3">
             <Button
               variant="primary"
-              onClick={login}
-              className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-800 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-900"
+              onClick={loginMock}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-700 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-800"
             >
-              <span>Sign in with SSO (Keycloak Server)</span>
+              <span>Log Masuk Pegawai (Mod Pembangunan / Mock)</span>
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
               </svg>
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={login}
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100"
+            >
+              <span>Sign in with SSO (Keycloak Server)</span>
             </Button>
           </div>
 

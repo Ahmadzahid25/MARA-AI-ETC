@@ -11,7 +11,7 @@ from agents.planner.planner import KNOWN_TEMPLATES, Planner, PlanParsingError
 
 async def _fixed_matcher(template_name: str | None, confidence: float):
     async def matcher(objective, templates):
-        return template_name, confidence
+        return template_name, confidence, None
 
     return matcher
 
@@ -67,7 +67,7 @@ class TestPlanSelection:
         mock_response.choices = [
             MagicMock(
                 message=MagicMock(
-                    content='{"template_name": "market_research", "confidence": 0.8}'
+                    content='{"intent": "workflow", "template_name": "market_research", "confidence": 0.8}'
                 )
             )
         ]

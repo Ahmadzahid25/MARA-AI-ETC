@@ -85,8 +85,9 @@ def create_app(
             yield
             return
 
-        if settings.mode in {'dev', 'staging', 'production'}:
-            use_db_store = settings.debug or settings.mode != 'dev'
+        env = getattr(settings, 'environment', getattr(settings, 'mode', 'dev'))
+        if env in {'dev', 'staging', 'production'}:
+            use_db_store = getattr(settings, 'debug', False) or env != 'dev'
             if use_db_store:
                 dsn = str(settings.database.primary_dsn).replace(
                     'postgresql+asyncpg://', 'postgresql://'
