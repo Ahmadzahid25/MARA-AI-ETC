@@ -1,11 +1,21 @@
 import { UserManager, WebStorageStateStore, User } from 'oidc-client-ts';
 
-const KEYCLOAK_URL =
-  import.meta.env.VITE_KEYCLOAK_URL ?? 'http://localhost:8080';
+function getDynamicKeycloakUrl(): string {
+  const envUrl = import.meta.env.VITE_KEYCLOAK_URL;
+  if (envUrl && !envUrl.includes('loca.lt')) {
+    return envUrl;
+  }
+  const protocol = window.location.protocol;
+  const hostname = window.location.hostname;
+  return `${protocol}//${hostname}:8080`;
+}
+
+const KEYCLOAK_URL = getDynamicKeycloakUrl();
 const KEYCLOAK_REALM =
   import.meta.env.VITE_KEYCLOAK_REALM ?? 'mara-ai-etc';
 const CLIENT_ID =
   import.meta.env.VITE_KEYCLOAK_CLIENT_ID ?? 'mara-officer-workspace';
+
 
 // OIDC redirect goes to /callback — a dedicated page that handles the code
 // exchange and then navigates to the original destination (or /).
