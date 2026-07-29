@@ -20,15 +20,15 @@ export function ApplicantPortalPage() {
   const [userToken, setUserToken] = useState<string | null>(null);
 
   // Application Form State
-  const [applicantName, setApplicantName] = useState('Siti Aminah binti Hassan');
-  const [icNumber, setIcNumber] = useState('920514-10-5234');
-  const [phone, setPhone] = useState('019-8765432');
-  const [businessName, setBusinessName] = useState('Anggun Hijab Enterprise');
-  const [ssmNumber, setSsmNumber] = useState('202203001234');
-  const [sector, setSector] = useState('Tekstil & Pakaian');
-  const [scheme, setScheme] = useState('MARA Skim Pembiayaan Perniagaan Muda');
-  const [amountRequested, setAmountRequested] = useState<number>(50000);
-  const [purpose, setPurpose] = useState('Pembelian stok kain & peralatan jahit baharu');
+  const [applicantName, setApplicantName] = useState('');
+  const [icNumber, setIcNumber] = useState('');
+  const [phone, setPhone] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  const [ssmNumber, setSsmNumber] = useState('');
+  const [sector, setSector] = useState('');
+  const [scheme, setScheme] = useState('');
+  const [amountRequested, setAmountRequested] = useState<number | ''>('');
+  const [purpose, setPurpose] = useState('');
   
   const [applicationId, setApplicationId] = useState<string | null>(null);
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -54,6 +54,10 @@ export function ApplicantPortalPage() {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError(null);
+
+    if (fullName && !applicantName) {
+      setApplicantName(fullName);
+    }
 
     try {
       const endpoint = authMode === 'register' ? '/api/v1/auth/register' : '/api/v1/auth/login';
@@ -106,7 +110,7 @@ export function ApplicantPortalPage() {
       },
       financing: {
         scheme,
-        amount_requested: Number(amountRequested),
+        amount_requested: Number(amountRequested) || 0,
         purpose,
         tenure_months: 36,
       },
@@ -148,7 +152,7 @@ export function ApplicantPortalPage() {
 
     const docsToUpload = [
       { docType: 'SSM_CERTIFICATE', file: docSsm, label: 'Sijil Pendaftaran SSM' },
-      { docType: 'BANK_STATEMENT', file: docBank, label: 'Penyataan Bank 6 Bulan' },
+      { docType: 'BANK_STATEMENT', file: docBank, label: 'Penyatan Bank 6 Bulan' },
       { docType: 'IDENTITY_COPY', file: docIc, label: 'Salinan Kad Pengenalan' },
     ];
 
@@ -326,10 +330,10 @@ export function ApplicantPortalPage() {
               <div className="space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-4 dark:border-[#222328] dark:bg-[#18191C]">
                 <Typography.H5 className="text-indigo-600 dark:text-indigo-400">1. Maklumat Pemohon</Typography.H5>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Input label="Nama Penuh" value={applicantName} onChange={(e) => setApplicantName(e.target.value)} required />
-                  <Input label="No. Kad Pengenalan" value={icNumber} onChange={(e) => setIcNumber(e.target.value)} required />
-                  <Input label="No. Telefon" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-                  <Input label="E-mel" value={email || 'applicant@mara.gov.my'} onChange={(e) => setEmail(e.target.value)} required />
+                  <Input label="Nama Penuh" value={applicantName} onChange={(e) => setApplicantName(e.target.value)} placeholder="e.g. Siti Aminah binti Hassan" required />
+                  <Input label="No. Kad Pengenalan" value={icNumber} onChange={(e) => setIcNumber(e.target.value)} placeholder="e.g. 920514-10-5234" required />
+                  <Input label="No. Telefon" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="e.g. 019-8765432" required />
+                  <Input label="E-mel" value={email || 'applicant@mara.gov.my'} onChange={(e) => setEmail(e.target.value)} placeholder="e.g. pemohon@mara.gov.my" required />
                 </div>
               </div>
 
@@ -337,9 +341,9 @@ export function ApplicantPortalPage() {
               <div className="space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-4 dark:border-[#222328] dark:bg-[#18191C]">
                 <Typography.H5 className="text-indigo-600 dark:text-indigo-400">2. Maklumat Perniagaan</Typography.H5>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <Input label="Nama Syarikat / Perniagaan" value={businessName} onChange={(e) => setBusinessName(e.target.value)} required />
-                  <Input label="No. Pendaftaran SSM" value={ssmNumber} onChange={(e) => setSsmNumber(e.target.value)} required />
-                  <Input label="Sektor Perniagaan" value={sector} onChange={(e) => setSector(e.target.value)} required />
+                  <Input label="Nama Syarikat / Perniagaan" value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="e.g. Anggun Hijab Enterprise" required />
+                  <Input label="No. Pendaftaran SSM" value={ssmNumber} onChange={(e) => setSsmNumber(e.target.value)} placeholder="e.g. 202203001234" required />
+                  <Input label="Sektor Perniagaan" value={sector} onChange={(e) => setSector(e.target.value)} placeholder="e.g. Tekstil & Pakaian" required />
                 </div>
               </div>
 
@@ -347,15 +351,16 @@ export function ApplicantPortalPage() {
               <div className="space-y-3 rounded-lg border border-slate-100 bg-slate-50 p-4 dark:border-[#222328] dark:bg-[#18191C]">
                 <Typography.H5 className="text-indigo-600 dark:text-indigo-400">3. Butiran Pembiayaan</Typography.H5>
                 <div className="space-y-3">
-                  <Input label="Skim Pembiayaan" value={scheme} onChange={(e) => setScheme(e.target.value)} required />
+                  <Input label="Skim Pembiayaan" value={scheme} onChange={(e) => setScheme(e.target.value)} placeholder="e.g. MARA Skim Pembiayaan Perniagaan Muda" required />
                   <Input
                     label="Jumlah Pembiayaan Dipohon (RM)"
                     type="number"
                     value={amountRequested.toString()}
-                    onChange={(e) => setAmountRequested(Number(e.target.value))}
+                    onChange={(e) => setAmountRequested(e.target.value ? Number(e.target.value) : '')}
+                    placeholder="e.g. 50000"
                     required
                   />
-                  <Input label="Tujuan Pembiayaan" value={purpose} onChange={(e) => setPurpose(e.target.value)} required />
+                  <Input label="Tujuan Pembiayaan" value={purpose} onChange={(e) => setPurpose(e.target.value)} placeholder="e.g. Pembelian stok kain & peralatan jahit baharu" required />
                 </div>
               </div>
 
@@ -370,6 +375,7 @@ export function ApplicantPortalPage() {
             </form>
           </div>
         )}
+
 
         {/* STEP 3: DOCUMENT UPLOAD (MIN 3 DOCS) */}
         {step === 'documents' && (
