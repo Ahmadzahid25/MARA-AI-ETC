@@ -5,10 +5,10 @@ function getDynamicKeycloakUrl(): string {
   if (envUrl && !envUrl.includes('loca.lt')) {
     return envUrl;
   }
-  const protocol = window.location.protocol;
   const hostname = window.location.hostname;
-  return `${protocol}//${hostname}:8080`;
+  return `http://${hostname}:8080`;
 }
+
 
 const KEYCLOAK_URL = getDynamicKeycloakUrl();
 const KEYCLOAK_REALM =
