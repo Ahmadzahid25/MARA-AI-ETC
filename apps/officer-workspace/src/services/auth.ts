@@ -5,9 +5,14 @@ function getDynamicKeycloakUrl(): string {
   if (envUrl && !envUrl.includes('loca.lt')) {
     return envUrl;
   }
+  const protocol = window.location.protocol;
   const hostname = window.location.hostname;
+  if (protocol === 'https:') {
+    return `https://auth-mara.${hostname.replace(/^mara-aietc\./, '')}`;
+  }
   return `http://${hostname}:8080`;
 }
+
 
 
 const KEYCLOAK_URL = getDynamicKeycloakUrl();
