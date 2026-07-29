@@ -101,6 +101,21 @@ export function LoginPage() {
           </p>
 
           <div className="mt-6 space-y-3">
+            <a
+              href="/applicant"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 shadow-sm"
+            >
+              <span>Portal Pemohon Usahawan (Hantar Permohonan)</span>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+              </svg>
+            </a>
+
+            <div className="relative my-2 flex items-center justify-center">
+              <div className="w-full border-t border-slate-200" />
+              <span className="absolute bg-white px-2 text-[11px] uppercase tracking-wider text-slate-400 font-medium">Akses Pegawai</span>
+            </div>
+
             <Button
               variant="primary"
               onClick={loginMock}
@@ -119,6 +134,7 @@ export function LoginPage() {
               <span>Sign in with SSO (Keycloak Server)</span>
             </Button>
           </div>
+
 
           <div className="mt-8 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
             <p className="text-xs font-medium text-slate-500">Milestone 0</p>
