@@ -15,6 +15,16 @@ interface AppLayoutProps {
 
 const NAV_ITEMS = [
   {
+    to: '/applicant',
+    label: 'Portal Pemohon',
+    icon: (
+      <svg className="h-4 w-4 shrink-0 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      </svg>
+    ),
+  },
+
+  {
     to: '/',
     label: 'Workspace',
     icon: (
@@ -37,7 +47,7 @@ const NAV_ITEMS = [
     label: 'Review Console',
     icon: (
       <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012-2m-6 9l2 2 4-4" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
       </svg>
     ),
   },
@@ -63,6 +73,7 @@ const NAV_ITEMS = [
 ];
 
 function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+
   const { theme, toggleTheme } = useTheme();
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
