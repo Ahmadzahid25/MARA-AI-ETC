@@ -37,14 +37,43 @@ from shared.llm.model_tiers import AgentName
 from shared.schemas.planning import PlanResult, WorkflowTemplate
 
 PROFILE = profile_for(AgentName.PLANNER.value)
-# Sourced from the profile registry — see shared/agent_profiles/profiles.py.
 CONFIDENCE_THRESHOLD = confidence_threshold_for(AgentName.PLANNER.value)
 
-# The bounded catalogue — docs/architecture/07-workflow-architecture.md
-# §7.3's table, verbatim. Only `document_assessment` and `loan_assessment`
-# have a real LangGraph implementation under workflows/ as of this slice;
-# the Planner's own job (selecting a name + parameters) doesn't depend on
-# that — see module docstring.
+# ---------------------------------------------------------------------------
+# System prompt — gives the LLM personality, judgment, and the critical
+# rule that it must NOT trigger a workflow just because a message arrived.
+#
+# This is the single most impactful change for making the agent feel natural:
+# without a system prompt the LLM has no context for *why* it is being asked
+# to classify intent, so it defaults to the most literal reading ("officer
+# said something → run a workflow"). With a system prompt it reasons first.
+# ---------------------------------------------------------------------------
+SYSTEM_PROMPT = """\
+You are MARA AI, the intelligent assistant for Pegawai MARA (MARA officers) \
+who process loan and grant applications for Malaysian entrepreneurs.
+
+You have access to specialised AI workflows:
+- Document Assessment — extract and verify uploaded documents
+- Loan Assessment — full evaluation pipeline (Document → Compliance → Finance → Risk → Recommendation)
+- Market Research — sector/region analysis
+- Risk Analysis — standalone risk spot-checks
+- Committee Report, Presentation, Audio Briefing — triggered on completed assessments
+- Human Review — approval-gate handler
+
+Your personality and judgment rules:
+1. Be friendly, professional, and helpful — like a knowledgeable colleague, not a rigid system.
+2. Respond in English by default. Switch naturally to Bahasa Malaysia if the officer writes in BM.
+3. **Only trigger a workflow when the officer clearly needs one.** \
+   Greetings, questions about your capabilities, small talk, and vague statements \
+   must receive a conversational reply — never a workflow.
+4. When a workflow is genuinely needed but required information is missing \
+   (e.g. no document attached), ask for it conversationally — do not error.
+5. Be concise. Officers are busy; do not pad replies unnecessarily.
+
+You are NOT a rigid classifier. You have judgment. Use it.\
+"""
+
+# The bounded catalogue — docs/architecture/07-workflow-architecture.md §7.3.
 KNOWN_TEMPLATES: tuple[WorkflowTemplate, ...] = (
     WorkflowTemplate(
         name='document_assessment',
@@ -103,37 +132,76 @@ class PlanParsingError(Exception):
     silently defaulted to a guessed template."""
 
 
-# (objective, candidate templates) -> (template_name or None, confidence).
+# (objective, candidate templates) -> (template_name or "converse" or None, confidence, reply or None).
 # Default calls the LLM (Haiku tier); tests inject a deterministic fake.
 TemplateMatcher = Callable[
-    [str, tuple[WorkflowTemplate, ...]], Awaitable[tuple[str | None, float]]
+    [str, tuple[WorkflowTemplate, ...]],
+    Awaitable[tuple[str | None, float, str | None]],
 ]
 
 
 def _build_match_prompt(objective: str, templates: tuple[WorkflowTemplate, ...]) -> str:
     catalogue_text = '\n'.join(f'- {t.name}: {t.description}' for t in templates)
     return (
-        f'Officer objective: {objective}\n\n'
+        f'Officer message: {objective}\n\n'
         f'Available workflow templates:\n{catalogue_text}\n\n'
-        f'Which template best matches this objective? Respond with a JSON '
-        f'object with exactly these keys: "template_name" (one of the '
-        f'names above, or null if none apply), "confidence" (float '
-        f'0.0-1.0). Respond with the JSON object only, no other text.'
+        f'Decide which of the two intents applies:\n\n'
+        f'A) CONVERSE — the officer is greeting you, asking a general question, '
+        f'asking about your capabilities, or their message does not clearly '
+        f'request one of the listed workflows.\n\n'
+        f'B) WORKFLOW — the officer clearly wants to start one of the listed '
+        f'workflows right now.\n\n'
+        f'Respond with a JSON object. Use one of these two shapes only:\n\n'
+        f'Shape A (converse):\n'
+        f'{{"intent": "converse", "reply": "<your helpful conversational response>"}}\n\n'
+        f'Shape B (workflow):\n'
+        f'{{"intent": "workflow", "template_name": "<name from list above>", "confidence": <float 0.0-1.0>}}\n\n'
+        f'Rules:\n'
+        f'- Prefer CONVERSE when in doubt. Never trigger a workflow on a greeting or vague message.\n'
+        f'- For CONVERSE, write the reply as if you are speaking directly to the officer.\n'
+        f'- For WORKFLOW, confidence must reflect how certain you are this template matches.\n'
+        f'- JSON only. No other text.'
     )
 
 
-def _parse_match(raw_content: str) -> tuple[str | None, float]:
+def _parse_match(raw_content: str) -> tuple[str | None, float, str | None]:
+    """Parse the LLM's dual-intent JSON.
+
+    Returns ``(template_name_or_None, confidence, conversational_reply_or_None)``.
+    ``"converse"`` intent → ``(None, 1.0, reply_text)``.
+    ``"workflow"`` intent → ``(template_name, confidence, None)``.
+    """
     try:
         raw = json.loads(raw_content)
-        template_name = raw['template_name']
-        confidence = float(raw['confidence'])
-    except (json.JSONDecodeError, KeyError, TypeError, ValueError) as exc:
+        intent = raw.get('intent')
+    except (json.JSONDecodeError, AttributeError) as exc:
         raise PlanParsingError(
             f'Malformed match output {raw_content!r}: {exc}'
         ) from exc
-    if not 0.0 <= confidence <= 1.0:
-        raise PlanParsingError(f'confidence {confidence} out of range [0.0, 1.0]')
-    return template_name, confidence
+
+    if intent == 'converse':
+        reply = raw.get('reply')
+        if not isinstance(reply, str) or not reply.strip():
+            raise PlanParsingError(
+                f'Converse intent missing non-empty "reply" field: {raw_content!r}'
+            )
+        return None, 1.0, reply.strip()
+
+    if intent == 'workflow':
+        try:
+            template_name = raw['template_name']
+            confidence = float(raw['confidence'])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise PlanParsingError(
+                f'Workflow intent missing template_name/confidence: {raw_content!r}: {exc}'
+            ) from exc
+        if not 0.0 <= confidence <= 1.0:
+            raise PlanParsingError(f'confidence {confidence} out of range [0.0, 1.0]')
+        return template_name, confidence, None
+
+    raise PlanParsingError(
+        f'Unknown intent {intent!r} in {raw_content!r}. Expected "converse" or "workflow".'
+    )
 
 
 class Planner:
@@ -158,20 +226,43 @@ class Planner:
     async def plan(
         self, objective: str, parameters: dict[str, object] | None = None
     ) -> PlanResult:
-        """Select and parameterize a template for ``objective``. Per
-        §5.2's escalation rule, returns an escalated ``PlanResult``
-        (``template_name=None``, a ``clarification_question``) rather than
-        guessing when no template matches with confidence >= threshold, or
-        when the matched template is missing a required parameter.
+        """Classify the officer's message and return the appropriate result.
+
+        Three possible outcomes (mirroring ``PlanResult``'s three modes):
+
+        1. **Conversational** — the message was a greeting or general question;
+           a ``conversational_reply`` is returned directly without touching any
+           workflow.  This is the key change vs the original implementation:
+           the Planner is no longer forced to pick a template for every input.
+
+        2. **Workflow selected** — clear intent + all required parameters
+           supplied → ``template_name`` + ``parameters`` returned.
+
+        3. **Clarification** — workflow intent detected but confidence below
+           threshold, or required parameters missing → ``clarification_question``
+           returned (§5.2.1 escalation rule).
         """
 
         supplied_parameters = parameters or {}
 
         if self._matcher is not None:
-            template_name, confidence = await self._matcher(objective, self._templates)
+            template_name, confidence, converse_reply = await self._matcher(
+                objective, self._templates
+            )
         else:
-            template_name, confidence = await self._default_matcher(objective)
+            template_name, confidence, converse_reply = await self._default_matcher(
+                objective
+            )
 
+        # ── Conversational path ─────────────────────────────────────────────
+        if template_name is None and converse_reply is not None:
+            return PlanResult(
+                template_name=None,
+                confidence=1.0,
+                conversational_reply=converse_reply,
+            )
+
+        # ── Workflow path ───────────────────────────────────────────────────
         known_names = frozenset(t.name for t in self._templates)
         if template_name is not None and template_name not in known_names:
             raise PlanParsingError(
@@ -184,12 +275,10 @@ class Planner:
                 template_name=None,
                 confidence=confidence,
                 clarification_question=(
-                    f'I could not confidently match "{objective}" to a known '
-                    f'workflow (confidence {confidence:.2f}, threshold '
-                    f'{self.confidence_threshold}). Could you clarify what '
-                    f'you want to do — for example, review a document, '
-                    f'assess a loan application, or research a market '
-                    f'sector?'
+                    f'I could not confidently match your request to a known '
+                    f'workflow (confidence {confidence:.2f}). Could you clarify '
+                    f'what you want to do — for example, review a document, '
+                    f'assess a loan application, or research a market sector?'
                 ),
             )
 
@@ -198,12 +287,13 @@ class Planner:
             p for p in template.required_parameters if p not in supplied_parameters
         ]
         if missing:
+            missing_str = ', '.join(f'"{p}"' for p in missing)
             return PlanResult(
                 template_name=None,
                 confidence=confidence,
                 clarification_question=(
-                    f'The "{template.name}" workflow needs {missing} before '
-                    f'it can start — could you provide '
+                    f'To start the "{template.name}" workflow I need '
+                    f'{missing_str}. Could you provide '
                     f'{"these" if len(missing) > 1 else "this"}?'
                 ),
             )
@@ -214,10 +304,17 @@ class Planner:
             confidence=confidence,
         )
 
-    async def _default_matcher(self, objective: str) -> tuple[str | None, float]:
+    async def _default_matcher(
+        self, objective: str
+    ) -> tuple[str | None, float, str | None]:
+        """Call the LLM with a system prompt and the dual-intent prompt."""
         prompt = _build_match_prompt(objective, self._templates)
         response = await self._llm_client.complete_for_agent(
-            AgentName.PLANNER, [{'role': 'user', 'content': prompt}]
+            AgentName.PLANNER,
+            [
+                {'role': 'system', 'content': SYSTEM_PROMPT},
+                {'role': 'user', 'content': prompt},
+            ],
         )
         content = response.choices[0].message.content
         if content is None:

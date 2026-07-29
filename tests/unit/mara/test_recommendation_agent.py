@@ -123,6 +123,24 @@ class TestHardViolationWithholds:
         assert output.decision is None
         assert 'hard compliance violation' in output.withheld_reason.lower()
 
+    @pytest.mark.asyncio
+    async def test_acknowledged_hard_violation_allows_recommendation(self) -> None:
+        recommender = await _fixed_recommender(RecommendationDecision.APPROVE)
+        agent = RecommendationAgent(recommender=recommender)
+
+        output = await agent.recommend(
+            'doc-1',
+            compliance_checklist=_violating_checklist(),
+            has_acknowledged_violation=True,
+            financial_analysis=_finance(),
+            risk_rating=_complete_risk(),
+            market_brief=_market(),
+        )
+
+        assert output.decision == RecommendationDecision.APPROVE
+        assert output.withheld_reason is None
+        assert output.has_acknowledged_violation is True
+
 
 class TestIncompleteRiskWithholds:
     @pytest.mark.asyncio
@@ -160,6 +178,7 @@ class TestNormalRecommendation:
 
         assert output.decision == RecommendationDecision.APPROVE
         assert output.withheld_reason is None
+        assert output.has_acknowledged_violation is False
         assert output.is_low_confidence() is False
 
     @pytest.mark.asyncio

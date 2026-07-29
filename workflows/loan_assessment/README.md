@@ -29,13 +29,11 @@ away** — see the module's own docstring for the full account:
    works around with a fake pass. Citation verification is consequently
    **not wired into this workflow slice**.
 
-**A genuine, documented tension, not silently resolved either way:** an
-*acknowledged* hard compliance violation still yields a withheld
-recommendation, because `agents/recommendation_agent`'s own §5.8 escalation
-rule is unconditional ("if any upstream agent flagged a hard compliance
-violation") — §7.4's acknowledgment gate lets this workflow keep computing
-Risk for audit-trail completeness, but does not itself grant Recommendation
-an exception path §5.8 doesn't specify.
+**Policy decision now implemented:** an *acknowledged* hard compliance
+violation proceeds through Recommendation on an explicit exception path, and
+the output is flagged `has_acknowledged_violation=true` for officer review
+and auditability. A non-acknowledged hard violation still withholds
+recommendation.
 
 **Not yet wired**, matching every other agent/workflow's own "not yet
 wired to the Agent Runtime" note in this repo: `agents/planner`'s template

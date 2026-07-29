@@ -7,8 +7,8 @@
     Model tier: Opus-class — "the one agent where Opus-class (if used at
     all) is cost-justified — lowest call volume, highest stakes"
 
-Two escalation rules read as if they conflict and are resolved here
-deliberately, not by picking one and ignoring the other:
+Two escalation rules used to conflict and are now resolved by an explicit
+exception path:
 
 - "Escalates (declines to recommend) if any upstream agent flagged a hard
   compliance violation, **or** if overall confidence is below threshold."
@@ -16,9 +16,11 @@ deliberately, not by picking one and ignoring the other:
   'low-confidence — manual assessment recommended' **rather than
   suppressed**."
 
-A hard compliance violation withholds a decision entirely
-(``withheld_reason`` set, ``decision=None``) — that reading is
-unambiguous. A merely low-confidence recommendation is **not** withheld:
+A hard compliance violation withholds a decision entirely unless the
+workflow has recorded an explicit compliance acknowledgment at the gate.
+When that acknowledgment exists, this agent proceeds and marks the output
+with ``has_acknowledged_violation=True`` for downstream officer visibility.
+A merely low-confidence recommendation is **not** withheld:
 it still carries a ``decision``, labeled via
 ``RecommendationOutput.is_low_confidence()``, because "rather than
 suppressed" only makes sense if a decision is actually present for the
@@ -162,6 +164,7 @@ class RecommendationAgent:
         document_id: str,
         *,
         compliance_checklist: ComplianceChecklist | None,
+        has_acknowledged_violation: bool = False,
         financial_analysis: FinancialAnalysis | None,
         risk_rating: RiskRating | None,
         market_brief: MarketBrief | None,
@@ -193,7 +196,7 @@ class RecommendationAgent:
         assert risk_rating is not None
         assert market_brief is not None
 
-        if compliance_checklist.has_hard_violation:
+        if compliance_checklist.has_hard_violation and not has_acknowledged_violation:
             return RecommendationOutput(
                 document_id=document_id,
                 withheld_reason=(
@@ -255,6 +258,10 @@ class RecommendationAgent:
             conditions=draft.conditions,
             confidence=draft.confidence,
             precedent_citations=precedent_citations,
+            has_acknowledged_violation=(
+                compliance_checklist.has_hard_violation
+                and has_acknowledged_violation
+            ),
         )
 
     async def _default_recommender(

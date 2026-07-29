@@ -1,17 +1,49 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button, Chip, Input, Tabs, Typography } from '@openhands/ui';
 import { AppLayout } from '../components/layout/AppLayout';
 import { GateRenderer } from '../components/review/GateRenderer';
 import { CorrectionForm } from '../components/review/CorrectionForm';
 import { useAssessments } from '../context/AssessmentContext';
 import { submitGateDecision, extractGateRole, ApiError } from '../services/data';
-import type { PendingGate } from '../services/api';
+import {
+  listOfficerApplications,
+  submitOfficerApplicationDecision,
+  type PendingGate,
+  type V1ApplicationStatus,
+  type V1OfficerDecisionAction,
+  type V1OfficerQueueItem,
+} from '../services/api';
 import type { FieldCorrection } from '../types/approval';
 import type { ExtractedField } from '../types/documents';
 
 export function ReviewConsolePage() {
   const { assessments, updateAssessment } = useAssessments();
+  const [queueItems, setQueueItems] = useState<V1OfficerQueueItem[]>([]);
+  const [queueLoading, setQueueLoading] = useState(true);
+  const [queueError, setQueueError] = useState<string | null>(null);
+  const [queueActionLoading, setQueueActionLoading] = useState<string | null>(null);
   const [activeAssessmentId, setActiveAssessmentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadQueue() {
+      setQueueLoading(true);
+      setQueueError(null);
+      try {
+        const queue = await listOfficerApplications();
+        setQueueItems(queue.items ?? []);
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 403) {
+          setQueueError('Queue ini memerlukan peranan Officer/Admin.');
+        } else {
+          setQueueError('Gagal memuat queue permohonan pegawai.');
+        }
+      } finally {
+        setQueueLoading(false);
+      }
+    }
+
+    loadQueue();
+  }, []);
 
   const activeAssessment = activeAssessmentId
     ? assessments.find((a) => a.thread_id === activeAssessmentId)
@@ -20,13 +52,63 @@ export function ReviewConsolePage() {
   const pendingAssessments = assessments.filter((a) => a.status === 'pending_approval');
   const completedAssessments = assessments.filter((a) => a.status === 'completed');
 
+  async function handleQueueDecision(
+    applicationId: string,
+    action: V1OfficerDecisionAction,
+  ) {
+    if (queueActionLoading) return;
+    setQueueActionLoading(`${applicationId}:${action}`);
+    try {
+      await submitOfficerApplicationDecision(applicationId, {
+        action,
+        reason:
+          action === 'approve'
+            ? 'Approved by officer via workspace queue'
+            : action === 'reject'
+              ? 'Rejected by officer via workspace queue'
+              : 'Additional information required by officer',
+      });
+      const queue = await listOfficerApplications();
+      setQueueItems(queue.items ?? []);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setQueueError(err.detail ?? err.message);
+      } else {
+        setQueueError('Keputusan gagal dihantar. Sila cuba lagi.');
+      }
+    } finally {
+      setQueueActionLoading(null);
+    }
+  }
+
+  function queueStatusChip(status: V1ApplicationStatus): {
+    color: 'gray' | 'green' | 'red' | 'primaryDark';
+    label: string;
+  } {
+    if (status === 'PROCESSING') return { color: 'primaryDark', label: 'Processing' };
+    if (status === 'UNDER_REVIEW') return { color: 'primaryDark', label: 'Under Review' };
+    if (status === 'APPROVED') return { color: 'green', label: 'Approved' };
+    if (status === 'REJECTED') return { color: 'red', label: 'Rejected' };
+    if (status === 'NEEDS_INFO') return { color: 'red', label: 'Needs Info' };
+    return { color: 'gray', label: status.replace(/_/g, ' ') };
+  }
+
   if (assessments.length === 0) {
     return (
       <AppLayout title="Review &amp; Approval Console" subtitle="Human-in-the-loop gates">
-        <div className="py-20 text-center">
-          <Typography.Text fontSize="m" className="text-gray-400">
-            No assessments yet. Start one from the Workspace.
-          </Typography.Text>
+        <div className="space-y-6 py-4">
+          <VerticalSliceQueuePanel
+            queueItems={queueItems}
+            queueLoading={queueLoading}
+            queueError={queueError}
+            queueActionLoading={queueActionLoading}
+            onDecision={handleQueueDecision}
+          />
+          <div className="py-10 text-center">
+            <Typography.Text fontSize="m" className="text-gray-400">
+              No legacy assessments yet. Start one from the Workspace.
+            </Typography.Text>
+          </div>
         </div>
       </AppLayout>
     );
@@ -34,6 +116,16 @@ export function ReviewConsolePage() {
 
   return (
     <AppLayout title="Review &amp; Approval Console" subtitle="Human-in-the-loop gates">
+      <div className="mb-6">
+        <VerticalSliceQueuePanel
+          queueItems={queueItems}
+          queueLoading={queueLoading}
+          queueError={queueError}
+          queueActionLoading={queueActionLoading}
+          onDecision={handleQueueDecision}
+        />
+      </div>
+
       <div className="mb-4 flex items-center gap-2">
         <Chip color="primaryDark" variant="pill">
           {pendingAssessments.length} pending
@@ -77,6 +169,106 @@ export function ReviewConsolePage() {
       )}
     </AppLayout>
   );
+
+  function VerticalSliceQueuePanel({
+    queueItems,
+    queueLoading,
+    queueError,
+    queueActionLoading,
+    onDecision,
+  }: {
+    queueItems: V1OfficerQueueItem[];
+    queueLoading: boolean;
+    queueError: string | null;
+    queueActionLoading: string | null;
+    onDecision: (applicationId: string, action: V1OfficerDecisionAction) => Promise<void>;
+  }) {
+    return (
+      <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-[#222328] dark:bg-[#131417]">
+        <div className="mb-3 flex items-center justify-between">
+          <Typography.Text fontSize="s" fontWeight={600} className="text-slate-900 dark:text-slate-100">
+            Vertical Slice Officer Queue
+          </Typography.Text>
+          <Chip color="primaryDark" variant="pill">
+            {queueItems.length} items
+          </Chip>
+        </div>
+
+        {queueLoading && (
+          <Typography.Text fontSize="xs" className="text-slate-500 dark:text-slate-400">
+            Loading officer queue...
+          </Typography.Text>
+        )}
+
+        {!queueLoading && queueError && (
+          <Typography.Text fontSize="xs" className="text-amber-600 dark:text-amber-400">
+            {queueError}
+          </Typography.Text>
+        )}
+
+        {!queueLoading && !queueError && queueItems.length === 0 && (
+          <Typography.Text fontSize="xs" className="text-slate-500 dark:text-slate-400">
+            Tiada permohonan dalam queue buat masa ini.
+          </Typography.Text>
+        )}
+
+        {!queueLoading && !queueError && queueItems.length > 0 && (
+          <div className="space-y-3">
+            {queueItems.map((item) => {
+              const statusMeta = queueStatusChip(item.status);
+              const approveKey = `${item.application_id}:approve`;
+              const rejectKey = `${item.application_id}:reject`;
+              const requestInfoKey = `${item.application_id}:request_more_info`;
+              return (
+                <div
+                  key={item.application_id}
+                  className="rounded-md border border-slate-100 p-3 dark:border-[#222328]"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <Typography.Text fontSize="s" fontWeight={600} className="text-slate-900 dark:text-slate-100">
+                        {item.applicant_name}
+                      </Typography.Text>
+                      <Typography.Text fontSize="xs" className="block text-slate-500 dark:text-slate-400">
+                        {item.scheme} · RM {item.amount_requested.toLocaleString('en-MY')}
+                      </Typography.Text>
+                    </div>
+                    <Chip color={statusMeta.color} variant="pill">
+                      {statusMeta.label}
+                    </Chip>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button
+                      variant="primary"
+                      disabled={queueActionLoading !== null}
+                      onClick={() => onDecision(item.application_id, 'approve')}
+                    >
+                      {queueActionLoading === approveKey ? 'Submitting...' : 'Approve'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      disabled={queueActionLoading !== null}
+                      onClick={() => onDecision(item.application_id, 'reject')}
+                    >
+                      {queueActionLoading === rejectKey ? 'Submitting...' : 'Reject'}
+                    </Button>
+                    <Button
+                      variant="tertiary"
+                      disabled={queueActionLoading !== null}
+                      onClick={() => onDecision(item.application_id, 'request_more_info')}
+                    >
+                      {queueActionLoading === requestInfoKey ? 'Submitting...' : 'Request Info'}
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
 }
 
 function AssessmentCard({

@@ -31,37 +31,68 @@ class WorkflowTemplate(BaseModel):
 
 
 class PlanResult(BaseModel):
-    """The Planner's output — a template reference plus parameters, or an
-    escalation. Never both, and never neither."""
+    """The Planner's output — a template reference plus parameters, a
+    clarification request, or a pure conversational reply.
+
+    Exactly one of these three modes is active:
+    - **Workflow selected**: ``template_name`` is set, others are None.
+    - **Clarification**: ``template_name`` is None, ``clarification_question``
+      is set — the officer's intent was ambiguous.
+    - **Conversational**: ``template_name`` is None,
+      ``conversational_reply`` is set — the message needed no tool at all
+      (greeting, general question, capability enquiry).
+    """
 
     template_name: str | None = Field(
         default=None,
-        description='None when the objective was ambiguous or matched no '
-        'template with sufficient confidence (§5.2.1) — escalated, not a '
-        'best-guess selection.',
+        description='None when no workflow was selected — either because the '
+        'intent was ambiguous (clarification_question is set) or because the '
+        'message was purely conversational (conversational_reply is set).',
     )
     parameters: dict[str, object] = Field(default_factory=dict)
     confidence: float = Field(ge=0.0, le=1.0, default=0.0)
     clarification_question: str | None = Field(
         default=None,
-        description='Set exactly when template_name is None — §5.2: "ask a '
-        'clarifying question instead of guessing the workflow."',
+        description='Set when template_name is None and the intent was '
+        'ambiguous — §5.2: "ask a clarifying question instead of guessing."',
+    )
+    conversational_reply: str | None = Field(
+        default=None,
+        description='Set when the officer message needed no workflow at all '
+        '(greeting, capability question, general chat). The Planner replies '
+        'directly without escalating.',
     )
 
     @property
     def is_escalated(self) -> bool:
-        return self.template_name is None
+        """True when a workflow could not be selected (ambiguous intent)."""
+        return self.template_name is None and self.clarification_question is not None
+
+    @property
+    def is_conversational(self) -> bool:
+        """True when the message needed no tool — just a chat reply."""
+        return self.template_name is None and self.conversational_reply is not None
 
     @model_validator(mode='after')
-    def _escalation_xor_selection(self) -> 'PlanResult':
-        if self.template_name is None and self.clarification_question is None:
-            raise ValueError(
-                'An escalated PlanResult (template_name=None) must carry a '
-                'clarification_question — never a silent non-selection'
-            )
-        if self.template_name is not None and self.clarification_question is not None:
+    def _exactly_one_mode(self) -> 'PlanResult':
+        has_template = self.template_name is not None
+        has_clarification = self.clarification_question is not None
+        has_reply = self.conversational_reply is not None
+
+        if has_template and (has_clarification or has_reply):
             raise ValueError(
                 'A PlanResult with a selected template_name must not also '
-                'carry a clarification_question'
+                'carry clarification_question or conversational_reply.'
+            )
+        if not has_template and not has_clarification and not has_reply:
+            raise ValueError(
+                'When template_name is None the result must carry either '
+                'clarification_question (ambiguous intent) or '
+                'conversational_reply (pure chat) — never both None.'
+            )
+        if has_clarification and has_reply:
+            raise ValueError(
+                'clarification_question and conversational_reply are mutually '
+                'exclusive — only one may be set.'
             )
         return self

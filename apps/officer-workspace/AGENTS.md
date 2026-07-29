@@ -98,8 +98,150 @@ is the officer-facing UI. Full context, in this order:
   `pending_gate`, `pending_payload`, `stage_log`, and `acted_gate` on a
   decision response.
 
+- ✅ **Vertical-slice API v1 is now exposed (temporary in-memory store for
+  wiring):**
+
+    | | |
+    |---|---|
+    | `POST /api/v1/auth/register` | JSON: `full_name`, `email`, `password` |
+    | `POST /api/v1/auth/login` | JSON: `email`, `password` |
+    | `POST /api/v1/applications` | JSON: `applicant`, `business`, `financing`, `documents[]` |
+    | `GET /api/v1/applications/{application_id}` | Full detail payload including `ai_assessment` and `workflow` |
+    | `POST /api/v1/applications/{application_id}/documents` | multipart: `file`, `doc_type` |
+    | `GET /api/v1/applications/{application_id}/status` | Status + `stage_log` + `updated_at` |
+    | `GET /api/v1/officer/applications` | Officer queue list |
+    | `POST /api/v1/officer/applications/{application_id}/decision` | JSON: `action` (`approve`/`reject`/`request_more_info`), optional `reason`, `conditions[]` |
+
+  `ai_assessment.recommendation` now carries
+  `has_acknowledged_violation` (boolean) and must be rendered.
+
+  Local test users (dev-only seed in backend):
+  `officer@mara.local` / `Officer123!`,
+  `admin@mara.local` / `Admin123!Secure`.
+
 - ⚠️ API will 503 until an OCR engine and document classifier are wired
   (`tools/ocr/README.md`). Expected current state, not a bug in your call.
+
+## Frontend execution map (mandatory from now on)
+
+This section is the working instruction for frontend continuation under
+Phase 17 vertical-slice execution. Use this sequence exactly unless product
+owner explicitly reprioritizes.
+
+### FE-P0 - Contract lock and adapters (done, keep stable)
+
+Build/maintain:
+
+1. Typed API client contracts in `src/services/api.ts`.
+2. Mapping layer in `src/services/data.ts` for UI-friendly models.
+3. One place only for status mapping (`SUBMITTED`, `PROCESSING`,
+  `UNDER_REVIEW`, `NEEDS_INFO`, `APPROVED`, `REJECTED`).
+
+Definition of done:
+
+1. No contract shape duplicated across multiple files.
+2. No UI page calls `fetch` directly; page -> services/data -> services/api.
+
+### FE-P1 - Officer queue vertical slice (R4) (in progress)
+
+Build/maintain:
+
+1. Queue list from `GET /api/v1/officer/applications`.
+2. Decision actions:
+  - `approve`
+  - `reject`
+  - `request_more_info`
+3. Post-action refresh + visible status transition in UI.
+
+Definition of done:
+
+1. Officer can action one case end-to-end from UI only.
+2. 401/403/5xx states are rendered as explicit user messages.
+
+### FE-P2 - Applicant portal path (R2) (next priority)
+
+Build in a dedicated applicant surface (not mixed into officer nav):
+
+1. Register/login:
+  - `POST /api/v1/auth/register`
+  - `POST /api/v1/auth/login`
+2. Multi-step application submit:
+  - `POST /api/v1/applications`
+3. Document upload after submission:
+  - `POST /api/v1/applications/{application_id}/documents`
+4. Status timeline/tracker:
+  - `GET /api/v1/applications/{application_id}/status`
+
+Definition of done:
+
+1. Applicant can complete one full happy path without Postman/manual API.
+2. Minimum 3 document uploads supported in one application flow.
+3. Status tracker clearly shows transitions over time.
+
+### FE-P3 - Officer case detail and evidence view (R4 continuation)
+
+Build:
+
+1. Case detail using `GET /api/v1/applications/{application_id}`.
+2. Render extraction/compliance/finance/risk/recommendation outputs.
+3. Render recommendation field `has_acknowledged_violation` explicitly.
+4. Preserve human-in-the-loop context beside actions (no blind action-only UI).
+
+Definition of done:
+
+1. Officer can open one case and understand why recommendation is shown.
+2. Decision action context is visible on the same screen.
+
+### FE-P4 - Hardening and smoke scripts (R5)
+
+Build:
+
+1. Frontend smoke scripts/checklists for:
+  - applicant happy path
+  - officer review path
+2. Error matrix coverage:
+  - auth expiry
+  - invalid payload/validation
+  - upload failure
+  - backend unavailable
+
+Definition of done:
+
+1. Team can re-run the same smoke path after each backend change quickly.
+2. Regressions are detectable by checklist, not memory.
+
+## How pieces connect (do not break this chain)
+
+1. Applicant submit creates `application_id`.
+2. Uploads attach to `application_id`.
+3. Backend workflow updates `applications.status` and `stage_log`.
+4. Officer queue consumes the same application record.
+5. Officer decision updates status and may resume workflow.
+6. Applicant status timeline reflects latest result.
+
+If a UI change breaks this chain, stop and flag immediately.
+
+## Frontend handoff artifacts required per phase
+
+For every PR in FE-P1..FE-P4, include these artifacts in PR description:
+
+1. API contract checklist (endpoint, request, response fields used).
+2. Action-to-status transition table touched by the PR.
+3. Error-state behavior summary (what user sees for 401/403/422/5xx).
+4. Smoke steps (copy-paste runnable).
+
+No artifact, no merge.
+
+## Scope discipline (so architecture/system/agentic team can stay focused)
+
+Frontend team owns delivery under `apps/officer-workspace/**` only.
+Architecture/system/agentic team owns backend/workflow/agent internals.
+
+When frontend is blocked by backend:
+
+1. Open a blocker note with exact endpoint + field needed.
+2. Do not implement speculative contracts.
+3. Continue with mock-adapter only if mock is explicitly labeled temporary.
 
 ## Three things about the approval flow that will shape your UI
 

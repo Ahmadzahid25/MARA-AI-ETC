@@ -89,4 +89,4 @@ per `14-roadmap.md` §14.4). See `agents/compliance_agent/README.md`.
 
 Full detail: [`docs/architecture/14-roadmap.md`](docs/architecture/14-roadmap.md) (roadmap + acceptance criteria) and [`docs/governance/architecture-approval-report.md`](docs/governance/architecture-approval-report.md) (ACCB gate conditions, kept current).
 
-**Everything above is local-only** — this repository has not been pushed to any remote (no `origin` configured). All work exists as commits on `git log` in this checkout.
+Remote/repository status can change by environment and date. Verify current remotes with `git remote -v` and branch state with `git status -sb` before relying on this section for release or collaboration decisions.

@@ -19,16 +19,24 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+import asyncpg
 
 from services.api_gateway.middleware import CorrelationIdMiddleware
 from services.api_gateway.routers import (
     approvals,
+    chat,
     diagnostics,
     documents,
     health,
     loans,
+    vertical_slice,
 )
 from services.api_gateway.telemetry import instrument_app
+from services.api_gateway.vertical_slice_store import (
+    AsyncpgVerticalSliceStore,
+    InMemoryVerticalSliceStore,
+    seed_default_users,
+)
 from services.approval_service.approval_service import (
     AsyncAuditWriter,
     ResumableWorkflow,
@@ -61,6 +69,8 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        app.state.vertical_slice_store = InMemoryVerticalSliceStore()
+
         if workflow is not None or loan_workflow is not None:
             # Test/injection path. Either graph may be supplied alone — a test
             # exercising the loan endpoints has no reason to also build a
@@ -74,6 +84,26 @@ def create_app(
             app.state.audit_writer = None if audit_writer is _UNSET else audit_writer
             yield
             return
+
+        if settings.mode in {'dev', 'staging', 'production'}:
+            use_db_store = settings.debug or settings.mode != 'dev'
+            if use_db_store:
+                dsn = str(settings.database.primary_dsn).replace(
+                    'postgresql+asyncpg://', 'postgresql://'
+                )
+                try:
+                    pool = await asyncpg.create_pool(dsn)
+                except Exception:
+                    pool = None
+                if pool is not None:
+                    app.state.vertical_slice_store = AsyncpgVerticalSliceStore(pool)
+
+                    async def _close_pool() -> None:
+                        await pool.close()
+
+                    app.state._close_vertical_slice_pool = _close_pool
+
+                await seed_default_users(app.state.vertical_slice_store)
 
         from services.api_gateway.composition import (
             build_real_audit_writer,
@@ -103,6 +133,10 @@ def create_app(
                 app.state.audit_writer = real_audit_writer
                 yield
 
+        close_pool = getattr(app.state, '_close_vertical_slice_pool', None)
+        if close_pool is not None:
+            await close_pool()
+
     app = FastAPI(
         title='MARA AI-ETC API Gateway',
         description='Single entry point for all officer-workspace traffic. '
@@ -121,6 +155,10 @@ def create_app(
         allow_headers=['*'],
     )
 
+    # Ensure request-time dependencies can resolve in tests that instantiate
+    # TestClient without entering lifespan context.
+    app.state.vertical_slice_store = InMemoryVerticalSliceStore()
+
     app.add_middleware(CorrelationIdMiddleware)
     instrument_app(app, settings)
 
@@ -129,5 +167,7 @@ def create_app(
     app.include_router(documents.router)
     app.include_router(approvals.router)
     app.include_router(loans.router)
+    app.include_router(chat.router)
+    app.include_router(vertical_slice.router)
 
     return app

@@ -2,6 +2,8 @@
 
 # Phase 14 — Development Roadmap
 
+Note: delivery order is temporarily overridden by [17-vertical-slice-execution-directive.md](17-vertical-slice-execution-directive.md) until its done definition is met. Once closed, this roadmap resumes as the primary sequencing document.
+
 > **v1.0 note:** per the [ACCB approval report](../governance/architecture-approval-report.md) §6, Milestone 0's acceptance criteria now explicitly include closing Conditions C-1, C-2, C-3, and C-5 — this milestone is not "complete" on infrastructure grounds alone. Agent counts below are corrected to 7 agents + 5 services throughout ([05-agent-architecture.md](05-agent-architecture.md) §5.14).
 
 ## 14.1 Staging philosophy

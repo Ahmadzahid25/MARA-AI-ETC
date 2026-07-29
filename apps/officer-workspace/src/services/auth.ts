@@ -80,8 +80,27 @@ interface MockUserShape {
   expires_at: number;
 }
 
+async function fetchBackendDevToken(): Promise<string | null> {
+  try {
+    const response = await fetch('/api/api/v1/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: 'officer@mara.local',
+        password: 'Officer123!',
+      }),
+    });
+    if (!response.ok) return null;
+    const body = (await response.json()) as { access_token?: string };
+    return body.access_token ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Sign in using Mock / Dev Mode without Keycloak server. */
 export async function loginMock(): Promise<void> {
+  const backendToken = await fetchBackendDevToken();
   const mockUser: MockUserShape = {
     profile: {
       sub: 'mock-officer-001',
@@ -90,7 +109,7 @@ export async function loginMock(): Promise<void> {
       email: 'pegawai@mara.gov.my',
       roles: ['officer', 'reviewer', 'admin'],
     },
-    access_token: 'mock-jwt-token-dev-mode',
+    access_token: backendToken ?? 'mock-jwt-token-dev-mode',
     expired: false,
     expires_at: Math.floor(Date.now() / 1000) + 86400,
   };

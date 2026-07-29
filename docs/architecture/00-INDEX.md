@@ -13,6 +13,8 @@ This is the enterprise engineering plan for MARA AI-ETC: an Agentic AI Operating
 
 This repository (`MARA AI-ETC/`) is itself an OpenHands checkout being evolved into MARA AI-ETC. Per the corrected [04-technology-stack.md](04-technology-stack.md) and the [repository audit](../repo-audit/00-index.md), that means **extracting and building against specific subsystems** (`openhands/app_server/*`: event stream, sandbox, MCP host, secrets, user auth) — not forking the entire tree. `frontend/` is kept in place as the source the reusable event-stream client is extracted from, not reskinned; `enterprise/` (OpenHands' own commercial SaaS surface) is not part of the platform at all and is scheduled for removal (Condition C-3).
 
+Temporary execution priority is defined in [17-vertical-slice-execution-directive.md](17-vertical-slice-execution-directive.md). It changes delivery order until the first end-to-end grant workflow slice is running, then hands back to Phase 14 sequencing.
+
 ## Reading order
 
 | # | Document | Covers |
@@ -33,6 +35,7 @@ This repository (`MARA AI-ETC/`) is itself an OpenHands checkout being evolved i
 | 14 | [14-roadmap.md](14-roadmap.md) | Milestones, dependencies, acceptance criteria, ACCB gate checkpoints |
 | 15 | [15-risk-assessment.md](15-risk-assessment.md) | Technical/business/security/operational/AI/scaling risks |
 | 16 | [16-future-expansion.md](16-future-expansion.md) | Voice-first, mobile, MCP servers, gov integrations |
+| 17 | [17-vertical-slice-execution-directive.md](17-vertical-slice-execution-directive.md) | Temporary delivery-order directive: vertical slice first, then roadmap handback |
 
 ## Non-negotiable principles
 

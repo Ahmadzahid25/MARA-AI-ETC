@@ -20,6 +20,7 @@ from services.approval_service.approval_service import (
     InspectableWorkflow,
     ResumableWorkflow,
 )
+from services.api_gateway.vertical_slice_store import VerticalSliceStore
 
 
 def get_workflow(request: Request) -> ResumableWorkflow:
@@ -49,3 +50,9 @@ def get_loan_workflow(request: Request) -> InspectableWorkflow:
     """
 
     return request.app.state.loan_workflow
+
+
+def get_vertical_slice_store(request: Request) -> VerticalSliceStore:
+    """Storage backend for vertical-slice API v1 endpoints."""
+
+    return request.app.state.vertical_slice_store

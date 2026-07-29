@@ -330,10 +330,9 @@ class TestHardComplianceViolation:
         assert result['recommendation'] is None
 
     @pytest.mark.asyncio
-    async def test_acknowledged_violation_still_withholds_recommendation(self) -> None:
-        """Documents the tension described in the module's own docstring:
-        acknowledgment lets the workflow keep computing Risk, but
-        agents/recommendation_agent's §5.8 escalation rule is unconditional."""
+    async def test_acknowledged_violation_allows_flagged_recommendation(self) -> None:
+        """Acknowledged hard violations proceed through recommendation on
+        an explicit exception path and are flagged for officer visibility."""
 
         compiled = _compiled_graph(
             compliance_agent=self._violating_compliance_agent(),
@@ -363,12 +362,13 @@ class TestHardComplianceViolation:
         assert result['risk_rating'] is not None
         assert result['risk_rating'].status.value == 'complete'
         # recommendation node ran (workflow wasn't halted, unlike the
-        # previous test) but withheld — see this test's own docstring.
+        # previous test) and returned a flagged recommendation.
         assert result['stage_log'][-1] == 'recommendation'
         assert '__interrupt__' in result  # paused at recommendation_approval
         assert result['recommendation'] is not None
-        assert result['recommendation'].decision is None
-        assert result['recommendation'].withheld_reason is not None
+        assert result['recommendation'].decision == RecommendationDecision.APPROVE
+        assert result['recommendation'].withheld_reason is None
+        assert result['recommendation'].has_acknowledged_violation is True
 
 
 class TestCitationVerificationIsLive:

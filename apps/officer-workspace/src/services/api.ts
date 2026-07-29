@@ -133,3 +133,161 @@ export async function submitDecision(
     },
   );
 }
+
+// ─── Chat API ─────────────────────────────────────────────────────
+
+export interface ChatApiResponse {
+  /** What to show the user. Always present. */
+  reply: string;
+  /** "conversational" | "workflow_started" | "clarification" | "error" */
+  intent: string;
+  /** Non-null when a workflow was launched by the Planner. */
+  workflow: { template_name: string; confidence: number } | null;
+}
+
+/**
+ * Send a free-text message to the AI gateway.  The backend Planner
+ * classifies the intent and decides whether to trigger a workflow or just
+ * chat — mirroring how Claude/Copilot behave: the model, not a hard-coded
+ * trigger, decides when a tool is actually needed.
+ */
+export async function sendChatMessage(message: string): Promise<ChatApiResponse> {
+  return request<ChatApiResponse>('/chat', {
+    method: 'POST',
+    body: JSON.stringify({ message }),
+  });
+}
+
+// ─── Vertical Slice v1 API (/api/v1/*) ─────────────────────────────────────
+
+export type V1ApplicationStatus =
+  | 'DRAFT'
+  | 'SUBMITTED'
+  | 'PROCESSING'
+  | 'NEEDS_INFO'
+  | 'UNDER_REVIEW'
+  | 'APPROVED'
+  | 'REJECTED';
+
+export type V1OfficerDecisionAction = 'approve' | 'reject' | 'request_more_info';
+
+export interface V1OfficerQueueItem {
+  application_id: string;
+  applicant_name: string;
+  scheme: string;
+  amount_requested: number;
+  status: V1ApplicationStatus;
+  updated_at: string;
+}
+
+export interface V1OfficerQueueOutput {
+  items: V1OfficerQueueItem[];
+}
+
+export interface V1ApplicationStatusOutput {
+  application_id: string;
+  status: V1ApplicationStatus;
+  stage_log: string[];
+  updated_at: string;
+}
+
+export interface V1ApplicationDocument {
+  doc_type: string;
+  file_name: string;
+  mime_type: string;
+  file_path: string;
+}
+
+export interface V1ApplicationDetailOutput {
+  application_id: string;
+  status: V1ApplicationStatus;
+  applicant: {
+    full_name: string;
+    ic_number: string;
+    phone: string;
+    email: string;
+    state: string;
+  };
+  business: {
+    business_name: string;
+    ssm_number: string;
+    sector: string;
+    years_operating: number;
+    monthly_revenue_avg: number;
+  };
+  financing: {
+    scheme: string;
+    amount_requested: number;
+    purpose: string;
+    tenure_months: number;
+  };
+  documents: V1ApplicationDocument[];
+  ai_assessment: Record<string, unknown>;
+  workflow: Record<string, unknown>;
+}
+
+export interface V1OfficerDecisionInput {
+  action: V1OfficerDecisionAction;
+  reason?: string;
+  conditions?: string[];
+}
+
+export interface V1OfficerDecisionOutput {
+  application_id: string;
+  status: V1ApplicationStatus;
+  decision_recorded_at: string;
+}
+
+export interface V1UploadDocumentOutput {
+  application_id: string;
+  document: V1ApplicationDocument;
+}
+
+export async function listOfficerApplications(): Promise<V1OfficerQueueOutput> {
+  return request<V1OfficerQueueOutput>('/api/v1/officer/applications');
+}
+
+export async function getApplicationDetail(
+  applicationId: string,
+): Promise<V1ApplicationDetailOutput> {
+  return request<V1ApplicationDetailOutput>(`/api/v1/applications/${applicationId}`);
+}
+
+export async function getApplicationStatus(
+  applicationId: string,
+): Promise<V1ApplicationStatusOutput> {
+  return request<V1ApplicationStatusOutput>(
+    `/api/v1/applications/${applicationId}/status`,
+  );
+}
+
+export async function submitOfficerApplicationDecision(
+  applicationId: string,
+  input: V1OfficerDecisionInput,
+): Promise<V1OfficerDecisionOutput> {
+  return request<V1OfficerDecisionOutput>(
+    `/api/v1/officer/applications/${applicationId}/decision`,
+    {
+      method: 'POST',
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export async function uploadApplicationDocument(
+  applicationId: string,
+  docType: string,
+  file: File,
+): Promise<V1UploadDocumentOutput> {
+  const formData = new FormData();
+  formData.append('doc_type', docType);
+  formData.append('file', file);
+
+  return request<V1UploadDocumentOutput>(
+    `/api/v1/applications/${applicationId}/documents`,
+    {
+      method: 'POST',
+      body: formData,
+    },
+  );
+}

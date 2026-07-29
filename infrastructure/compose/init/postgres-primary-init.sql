@@ -53,6 +53,78 @@ CREATE INDEX IF NOT EXISTS idx_calibration_agent_field
 CREATE INDEX IF NOT EXISTS idx_calibration_workflow_id
     ON long_term_memory_calibration (workflow_id);
 
+-- Vertical-slice v1 relational skeleton (docs/architecture/
+-- 17-vertical-slice-execution-directive.md §17.11).
+CREATE TABLE IF NOT EXISTS mara_users (
+    id                 UUID PRIMARY KEY,
+    full_name          TEXT NOT NULL,
+    email              TEXT NOT NULL UNIQUE,
+    password_hash      TEXT NOT NULL,
+    role               TEXT NOT NULL CHECK (role IN ('applicant', 'officer', 'admin')),
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS applicants (
+    id                 UUID PRIMARY KEY,
+    user_id            UUID NOT NULL REFERENCES mara_users(id),
+    full_name          TEXT NOT NULL,
+    ic_number          TEXT NOT NULL,
+    phone              TEXT NOT NULL,
+    email              TEXT NOT NULL,
+    state              TEXT NOT NULL,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS businesses (
+    id                 UUID PRIMARY KEY,
+    applicant_id       UUID NOT NULL REFERENCES applicants(id),
+    business_name      TEXT NOT NULL,
+    ssm_number         TEXT NOT NULL,
+    sector             TEXT NOT NULL,
+    years_operating    INTEGER NOT NULL DEFAULT 0,
+    monthly_revenue_avg NUMERIC(14, 2) NOT NULL DEFAULT 0,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS applications (
+    id                 UUID PRIMARY KEY,
+    applicant_id       UUID NOT NULL REFERENCES applicants(id),
+    business_id        UUID NOT NULL REFERENCES businesses(id),
+    scheme             TEXT NOT NULL,
+    amount_requested   NUMERIC(14, 2) NOT NULL,
+    purpose            TEXT NOT NULL,
+    tenure_months      INTEGER NOT NULL,
+    status             TEXT NOT NULL CHECK (
+        status IN ('DRAFT', 'SUBMITTED', 'PROCESSING', 'NEEDS_INFO', 'UNDER_REVIEW', 'APPROVED', 'REJECTED')
+    ),
+    ai_assessment      JSONB NOT NULL DEFAULT '{}'::jsonb,
+    stage_log          JSONB NOT NULL DEFAULT '[]'::jsonb,
+    decided_by         UUID REFERENCES mara_users(id),
+    decision_notes     TEXT NOT NULL DEFAULT '',
+    decided_at         TIMESTAMPTZ,
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_applications_status ON applications(status);
+CREATE INDEX IF NOT EXISTS idx_applications_updated_at ON applications(updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS application_documents (
+    id                 UUID PRIMARY KEY,
+    application_id     UUID NOT NULL REFERENCES applications(id),
+    doc_type           TEXT NOT NULL,
+    file_name          TEXT NOT NULL,
+    file_path          TEXT NOT NULL,
+    mime_type          TEXT NOT NULL,
+    ocr_status         TEXT NOT NULL DEFAULT 'PENDING',
+    extraction         JSONB NOT NULL DEFAULT '{}'::jsonb,
+    completeness       TEXT NOT NULL DEFAULT 'PERLU_PENGESAHAN',
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_application_documents_application_id
+    ON application_documents(application_id);
+
 -- LangGraph's PostgresSaver (shared/workflow_engine/checkpointer.py) creates
 -- its own checkpoint tables on first use via `PostgresSaver.setup()` — not
 -- created here, since their schema is owned by the langgraph-checkpoint-postgres

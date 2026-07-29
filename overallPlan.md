@@ -1,5 +1,7 @@
 # MARA AI-ETC — Overall Development Plan
 
+> **Directive mode active (2026-07-29):** execution priority is temporarily governed by `docs/architecture/17-vertical-slice-execution-directive.md` until its vertical-slice done definition is passed. Where this file conflicts with that directive, the directive wins for sequencing.
+
 > **This file is the coordination contract for the three development tracks.**
 > It answers one question at any moment: *what is each track supposed to be
 > doing right now, and what unblocks whom.* It does not replace the
@@ -70,6 +72,8 @@ roadmap's own Implementation Status notes agree, not just that code exists.
 ---
 
 ## 4. Current phase: Milestone 4 — Full Loan Assessment, end to end
+
+Parallel execution start (to avoid duplicate work): use four lanes immediately — Backend core, Workflow integration, Applicant web path, and Officer review path — with contract-first handoffs per `docs/architecture/17-vertical-slice-execution-directive.md` §§17.8-17.10.
 
 **Objective (roadmap §14.6):** an officer runs a real application end-to-end —
 intake → parallel analysis → risk → recommendation → approval → committee
@@ -180,6 +184,69 @@ critical/high findings; DR drill meets targets.
 ## 7. Status Log (newest first — one entry per forward move)
 
 > Format: `date — track — what moved — how it was verified — who needs to react`
+
+- **2026-07-29 — frontend** — Officer workspace now consumes vertical-slice
+  queue contracts in the UI lane: added typed `/api/v1/*` client methods in
+  `apps/officer-workspace/src/services/api.ts` (queue, detail, status,
+  officer decision, document upload), wired dashboard data service to real
+  officer queue-derived stats/workflows/pending/risk summaries in
+  `apps/officer-workspace/src/services/data.ts`, and added a live
+  "Vertical Slice Officer Queue" panel with Approve/Reject/Request Info
+  actions in `apps/officer-workspace/src/pages/ReviewConsolePage.tsx` while
+  keeping legacy assessment view as fallback. *Verified:* editor diagnostics
+  clean for touched files; `npm run build` in `apps/officer-workspace` passes.
+  *React:* **QA** — run manual officer-flow smoke through review queue actions.
+
+- **2026-07-29 — lead** — Runtime verification for Lane A/B unblocked and
+  stabilized: fixed API dependency initialization for tests by setting
+  `app.state.vertical_slice_store` at app construction, and normalized in-memory
+  application shape so top-level `workflow` is always present/synced with
+  `ai_assessment.workflow`. Also fixed router behavior so initial workflow run
+  marks `completed` when no interrupt, officer decision returns post-resume
+  final status, and document upload can retrigger workflow for
+  `queued_waiting_pdf/failed/resume_failed/NEEDS_INFO` cases.
+  *Verified:* `uv run --directory . python -m pytest`
+  `tests/unit/mara/test_vertical_slice_router.py`
+  `tests/unit/mara/test_recommendation_agent.py`
+  `tests/unit/mara/test_loan_assessment_workflow.py` => **24 passed**.
+  *React:* **Frontend** — proceed wiring against stable `/api/v1` contracts,
+  including upload + evolving status transitions. **Infra** — optional:
+  configure OTel collector on `localhost:4317` to remove trace-export warnings
+  during local test runs.
+
+- **2026-07-29 — lead** — Lane A moved from temporary module globals to a
+  repository abstraction with in-memory + AsyncPG implementations
+  (`services/api_gateway/vertical_slice_store.py`) and app-lifespan injection;
+  `/api/v1` router now uses store dependencies; deterministic workflow->status
+  mapping added (`queued/running/paused/completed/failed` to
+  `SUBMITTED/PROCESSING/UNDER_REVIEW/APPROVED/NEEDS_INFO`); applicant document
+  upload endpoint added (`POST /api/v1/applications/{application_id}/documents`)
+  with persisted file path and audit event; contract and frontend brief updated
+  (`docs/architecture/17-vertical-slice-execution-directive.md`,
+  `apps/officer-workspace/AGENTS.md`). *Verified:* editor diagnostics clean for
+  changed files and endpoint contract tests added
+  (`tests/unit/mara/test_vertical_slice_router.py`); runtime pytest execution
+  still blocked by host Python/uv environment mismatch (`SRE module mismatch`).
+  *React:* **Frontend** — wire upload flow + status tracker to new endpoint and
+  `UNDER_REVIEW` transitions. **Infra** — ensure upload directory mount policy
+  and DB schema bootstrap are aligned in compose.
+
+- **2026-07-29 — lead** — Phase 17 execution directive activated and
+  operationalized: parallel lane matrix + anti-rework protocol + contract
+  freeze/smoke checklist added (`docs/architecture/17-vertical-slice-execution-directive.md`);
+  Loan Assessment acknowledged-hard-violation policy resolved to explicit
+  flagged exception path (`has_acknowledged_violation=true`) across schema,
+  agent, workflow, and unit tests; API Gateway now exposes vertical-slice v1
+  endpoints (`/api/v1/auth/*`, `/api/v1/applications*`,
+  `/api/v1/officer/applications*`) with async best-effort loan-workflow trigger
+  and resume wiring; Postgres init gained v1 relational skeleton tables
+  (`mara_users`, `applicants`, `businesses`, `applications`,
+  `application_documents`). *Verified:* editor diagnostics clean for modified
+  files; runtime test execution still blocked by local Python/uv environment
+  mismatch (`SRE module mismatch`). *React:* **Frontend** — wire applicant and
+  officer flows to `/api/v1/*` contracts and render
+  `recommendation.has_acknowledged_violation`. **Infra** — execute SQL init
+  changes in dev stack and validate DB migration path.
 
 - **2026-07-27 — lead** — §9.7 low-trust tier + market-data freshness
   implemented and enforced in `tools/rag/rag_tool.py`; `TrustTier` required on

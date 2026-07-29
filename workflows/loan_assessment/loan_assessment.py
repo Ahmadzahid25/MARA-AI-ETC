@@ -38,23 +38,12 @@ documented simplification `workflows/document_assessment` already made for
 its own single gate ("real re-run routing per §7.4 is a later refinement")
 — not a new shortcut invented here.
 
-### Unresolved tension: an acknowledged hard violation still withholds
-### a recommendation
+### Resolved policy: acknowledged hard violation allows recommendation
 
-§7.4 says an acknowledged hard violation (accepted as a documented
-exception) lets Risk/Recommendation "proceed." §5.8's own escalation rule
-for the Recommendation Agent, however, is unconditional: "Escalates
-(declines to recommend) if any upstream agent flagged a hard compliance
-violation" — no exception carve-out is specified there. `agents/
-recommendation_agent` implements §5.8 literally, so an acknowledged
-violation still yields a withheld recommendation
-(`RecommendationOutput.withheld_reason` set) — acknowledgment only lets
-this workflow keep computing Risk (for audit-trail completeness) rather
-than halting immediately, it does not itself grant Recommendation an
-exception path §5.8 doesn't specify. Reconciling that tension — if MARA
-actually wants an accepted exception to unblock a real recommendation —
-is a product/architecture decision belonging in a revision of §5.8, not
-one resolved unilaterally in this workflow file.
+An acknowledged hard compliance violation now follows an explicit exception
+path: Recommendation proceeds, and the output is flagged with
+`has_acknowledged_violation=True`. Non-acknowledged hard violations still
+withhold recommendation as before.
 
 ### Why compliance acknowledgment is a pass-through node, not a conditional edge
 
@@ -393,9 +382,13 @@ def build_loan_assessment_graph(
         return 'completion' if _halted(state) else 'recommendation'
 
     async def _recommendation_node(state: LoanAssessmentState) -> dict:
+        compliance_decision = state.get('compliance_decision') or {}
         output = await recommendation_agent.recommend(
             state['document_id'],
             compliance_checklist=state['compliance_checklist'],
+            has_acknowledged_violation=(
+                compliance_decision.get('status') == 'acknowledged'
+            ),
             financial_analysis=state['financial_analysis'],
             risk_rating=state['risk_rating'],
             market_brief=state['market_brief'],

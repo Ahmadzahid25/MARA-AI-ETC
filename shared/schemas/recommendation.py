@@ -58,6 +58,12 @@ class RecommendationOutput(BaseModel):
         'explicitly declines to suggest an outcome rather than guessing."',
     )
     missing_inputs: list[str] = Field(default_factory=list)
+    has_acknowledged_violation: bool = Field(
+        default=False,
+        description='True when a hard compliance violation exists but was '
+        'explicitly acknowledged at the workflow gate, so this recommendation '
+        'is produced under an exception path rather than a clean pass.',
+    )
 
     @model_validator(mode='after')
     def _decision_xor_withheld(self) -> 'RecommendationOutput':
