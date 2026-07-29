@@ -41,6 +41,7 @@ async def postgres_checkpointer(
         'postgresql+asyncpg://', 'postgresql://'
     )
     async with AsyncPostgresSaver.from_conn_string(dsn) as saver:
+        await saver.setup()
         yield saver
 
 

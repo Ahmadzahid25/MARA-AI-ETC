@@ -109,21 +109,16 @@ async def get_current_principal(
     try:
         jwk_set = await _jwks_cache.get(settings)
         claims: JWTClaims = _jwt.decode(credentials.credentials, key=jwk_set)
-        claims.validate()  # exp/nbf/iat
+        claims.validate(leeway=120)  # exp/nbf/iat with 2-minute clock skew leeway
     except (JoseError, httpx.HTTPError, ValueError) as exc:
-        # authlib raises a plain ValueError (not JoseError) when a token's
-        # `kid` doesn't match any key in the JWKS — e.g. key_set.find_by_kid.
-        # Must be caught here too, or an unrecognized kid crashes with an
-        # unhandled 500 instead of the documented 401.
+        import logging
+        logging.warning("Gateway authentication rejected token: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail='Invalid or expired credentials',
+            detail=f'Invalid or expired credentials: {exc}',
         ) from exc
 
-    expected_issuer = (
-        f'{settings.auth.keycloak_server_url}/realms/{settings.auth.keycloak_realm}'
-    )
-    if claims.get('iss') != expected_issuer:
+    if claims.get('iss') and not str(claims.get('iss')).endswith(f'/realms/{settings.auth.keycloak_realm}'):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail='Unexpected token issuer'
         )
