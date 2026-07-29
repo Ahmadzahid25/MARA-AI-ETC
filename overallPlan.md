@@ -185,6 +185,12 @@ critical/high findings; DR drill meets targets.
 
 > Format: `date — track — what moved — how it was verified — who needs to react`
 
+- **2026-07-29 — lead** — Persistent restart handoff captured in
+  `docs/handoffs/2026-07-29-vertical-slice-recovery.md` with remote commit,
+  startup commands, verified tests, known machine-specific issues, and next
+  frontend/backend priorities. Use this file as the first recovery anchor
+  after any machine reset or environment rebuild.
+
 - **2026-07-29 — frontend** — Officer workspace now consumes vertical-slice
   queue contracts in the UI lane: added typed `/api/v1/*` client methods in
   `apps/officer-workspace/src/services/api.ts` (queue, detail, status,
