@@ -17,8 +17,9 @@ export class ApiError extends Error {
 async function request<T>(
   path: string,
   options: RequestInit = {},
+  accessToken?: string | null,
 ): Promise<T> {
-  const token = await getAccessToken();
+  const token = accessToken === undefined ? await getAccessToken() : accessToken;
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   };
@@ -238,6 +239,55 @@ export interface V1OfficerDecisionOutput {
   decision_recorded_at: string;
 }
 
+export interface V1AuthTokenOutput {
+  user_id: string;
+  role: 'applicant' | 'officer' | 'admin';
+  access_token: string;
+}
+
+export interface V1CreateApplicationInput {
+  applicant: V1ApplicationDetailOutput['applicant'];
+  business: V1ApplicationDetailOutput['business'];
+  financing: V1ApplicationDetailOutput['financing'];
+  documents: Array<Record<string, unknown>>;
+}
+
+export interface V1CreateApplicationOutput {
+  application_id: string;
+  status: V1ApplicationStatus;
+}
+
+export async function registerApplicant(input: {
+  full_name: string;
+  email: string;
+  password: string;
+}): Promise<V1AuthTokenOutput> {
+  return request<V1AuthTokenOutput>('/api/v1/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }, null);
+}
+
+export async function loginApplicant(input: {
+  email: string;
+  password: string;
+}): Promise<V1AuthTokenOutput> {
+  return request<V1AuthTokenOutput>('/api/v1/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }, null);
+}
+
+export async function createApplicantApplication(
+  input: V1CreateApplicationInput,
+  accessToken: string,
+): Promise<V1CreateApplicationOutput> {
+  return request<V1CreateApplicationOutput>('/api/v1/applications', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }, accessToken);
+}
+
 export interface V1UploadDocumentOutput {
   application_id: string;
   document: V1ApplicationDocument;
@@ -255,9 +305,12 @@ export async function getApplicationDetail(
 
 export async function getApplicationStatus(
   applicationId: string,
+  accessToken?: string | null,
 ): Promise<V1ApplicationStatusOutput> {
   return request<V1ApplicationStatusOutput>(
     `/api/v1/applications/${applicationId}/status`,
+    {},
+    accessToken,
   );
 }
 
@@ -278,6 +331,7 @@ export async function uploadApplicationDocument(
   applicationId: string,
   docType: string,
   file: File,
+  accessToken?: string | null,
 ): Promise<V1UploadDocumentOutput> {
   const formData = new FormData();
   formData.append('doc_type', docType);
@@ -289,5 +343,6 @@ export async function uploadApplicationDocument(
       method: 'POST',
       body: formData,
     },
+    accessToken,
   );
 }
