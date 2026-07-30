@@ -38,7 +38,7 @@ export default defineConfig({
       '/api': {
         target: process.env.VITE_API_GATEWAY_URL || 'http://localhost:8051',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        rewrite: (path) => path.replace(/^\/api(?!\/v1)/, ''),
       },
     },
   },
@@ -50,7 +50,7 @@ export default defineConfig({
       '/api': {
         target: process.env.VITE_API_GATEWAY_URL || 'http://localhost:8051',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        rewrite: (path) => path.replace(/^\/api(?!\/v1)/, ''),
       },
     },
   },

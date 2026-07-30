@@ -78,7 +78,9 @@ class TieredLLMClient:
 
         prompt = messages[-1]['content'] if messages else ''
         content = '0.85'
-        if 'JSON' in prompt or 'json' in prompt or 'document_agent' in caller_id:
+        if 'planner' in caller_id.lower() or 'intent' in prompt.lower():
+            content = '{"intent": "converse", "reply": "Halo! Saya adalah MARA AI Assistant. Saya boleh membantu anda menilai permohonan pembiayaan, menyemak dokumen, dan menganalisis sektor pasaran."}'
+        elif 'JSON' in prompt or 'json' in prompt or 'document_agent' in caller_id:
             content = (
                 '['
                 '{"name": "Applicant Name", "value": "Syarikat Usahawan Bumiputera Sdn Bhd", "confidence": 0.95, "page": 1},'

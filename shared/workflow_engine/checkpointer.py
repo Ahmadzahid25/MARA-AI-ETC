@@ -51,5 +51,5 @@ async def ensure_checkpoint_schema(settings: Settings) -> None:
     checkpoint tables already exist.
     """
 
-    async with postgres_checkpointer(settings) as saver:
-        await saver.setup()
+    async with postgres_checkpointer(settings):
+        pass

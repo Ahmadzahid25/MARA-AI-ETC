@@ -1,7 +1,7 @@
 import { getAccessToken } from './auth';
 import { API } from '../constants';
 
-const API_BASE = import.meta.env.VITE_API_GATEWAY_URL ?? API.BASE_PATH;
+const API_BASE = import.meta.env.VITE_API_GATEWAY_URL || API.BASE_PATH;
 
 export class ApiError extends Error {
   constructor(

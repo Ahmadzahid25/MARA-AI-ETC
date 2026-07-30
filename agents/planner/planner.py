@@ -173,6 +173,10 @@ def _parse_match(raw_content: str) -> tuple[str | None, float, str | None]:
     """
     try:
         raw = json.loads(raw_content)
+        if not isinstance(raw, dict):
+            raise PlanParsingError(
+                f'Expected JSON object, got {type(raw).__name__}: {raw_content!r}'
+            )
         intent = raw.get('intent')
     except (json.JSONDecodeError, AttributeError) as exc:
         raise PlanParsingError(
