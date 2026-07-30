@@ -102,14 +102,15 @@ CREATE TABLE IF NOT EXISTS branch_info (
 CREATE TABLE IF NOT EXISTS mara_users (
     id              UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     branch_code     TEXT NOT NULL,          -- merujuk kepada branch_info.branch_code
-    keycloak_sub    TEXT UNIQUE,            -- ID dari Keycloak (SSO)
+    keycloak_sub    TEXT UNIQUE,            -- ID dari Keycloak (SSO untuk Pegawai)
+    ic_number       TEXT NOT NULL UNIQUE,   -- KUNCI UTAMA pendaftaran & login pemohon (MyKad)
     full_name       TEXT NOT NULL,
-    ic_number       TEXT NOT NULL UNIQUE,
-    staff_id        TEXT NOT NULL UNIQUE,   -- No. Pekerja MARA
-    email           TEXT NOT NULL UNIQUE,
+    staff_id        TEXT UNIQUE,            -- No. Pekerja MARA (hanya untuk pegawai)
+    email           TEXT UNIQUE,            -- E-mel pengguna (opsional/sekunder)
     phone           TEXT,
+    password_hash   TEXT,                   -- Encrypted bcrypt (hanya untuk pemohon)
     role            TEXT NOT NULL CHECK (role IN (
-                        'applicant',        -- Pemohon (dari Portal Pemohon)
+                        'applicant',        -- Pemohon Usahawan (Portal Pemohon)
                         'officer',          -- Pegawai Penilaian
                         'senior_officer',   -- Pegawai Kanan / Penyelia
                         'risk_officer',     -- Pegawai Risiko
@@ -392,9 +393,9 @@ Terdapat **dua jenis pengguna** dalam sistem MARA AI-ETC dengan mekanisme login 
 | Jenis Pengguna | Mekanisme Login | Di Mana Data Login Disimpan | Di Mana Profil Disimpan |
 |---|---|---|---|
 | **Pegawai MARA** (Officer, Senior Officer, Risk Officer, Admin, Auditor) | SSO Keycloak (OIDC/JWT RS256) | **Keycloak DB** — berasingan, diurus oleh Keycloak | `mara_users` (cawangan) — hanya simpan `keycloak_sub` sebagai rujukan |
-| **Pemohon Usahawan** | API terus (`/api/v1/auth/login`) | `mara_users.password_hash` (bcrypt) dalam DB cawangan | `mara_users` + `applicants` (cawangan) |
+| **Pemohon Usahawan** | API terus (`/api/v1/auth/login`) guna **Nombor IC + Kata Laluan** | `mara_users.password_hash` (bcrypt) & `ic_number` dalam DB cawangan | `mara_users` + `applicants` (cawangan) |
 
-> **Prinsip Keselamatan**: Kata laluan pegawai **TIDAK PERNAH** disimpan dalam database MARA. Ia diurus sepenuhnya oleh Keycloak. MARA hanya menyimpan `keycloak_sub` (ID unik Keycloak) sebagai rujukan.
+> **Prinsip Pendaftaran Pemohon**: Pemohon mendaftar menggunakan **Nombor MyKad / IC** sebagai ID unik utama. Ini mengelakkan akaun bertindih/palsu dan membolehkan pengesahan identiti Bumiputera secara automatik.
 
 ---
 
@@ -441,33 +442,33 @@ Terdapat **dua jenis pengguna** dalam sistem MARA AI-ETC dengan mekanisme login 
 
 ---
 
-### 4.3 Aliran Daftar & Login Pemohon Usahawan
+### 4.3 Aliran Daftar & Login Pemohon Usahawan (Guna Nombor IC)
 
 ```
 ┌────────────────────────────────────────────────────────────────────┐
-│                  PEMOHON USAHAWAN — DAFTAR AKAUN                   │
+│             PEMOHON USAHAWAN — DAFTAR AKAUN GUNA IC                │
 │                                                                    │
 │  ApplicantPortalPage.tsx (halaman /applicant)                      │
 │      │                                                             │
 │      │  POST /api/v1/auth/register                                 │
-│      │  { full_name, email, password }                             │
+│      │  { ic_number: "900101-14-5543", full_name, phone, password } │
 │      ▼                                                             │
 │  mara_<cawangan> Database                                          │
 │  ┌──────────────────────────────────────────┐                      │
 │  │  mara_users (role='applicant')           │                      │
 │  │   - id (UUID)                            │                      │
-│  │   - email                                │  ← Disimpan di sini  │
+│  │   - ic_number  ← KUNCI UTAMA (MyKad)     │  ← Disimpan di sini  │
 │  │   - password_hash  ← bcrypt (tidak plain)│                      │
-│  │   - full_name                            │                      │
+│  │   - full_name, phone                     │                      │
 │  │   - branch_code  ← cawangan pemohon      │                      │
 │  └──────────────────────────────────────────┘                      │
 │                                                                    │
 │  ─────────────────────────────────────────────────────────         │
 │                                                                    │
 │  POST /api/v1/auth/login                                           │
-│  { email, password }                                               │
+│  { ic_number: "900101145543", password: "••••••••" }               │
 │      │                                                             │
-│      │  Verify bcrypt → Jana JWT token HS256                       │
+│      │  Verify Nombor IC + bcrypt password → Jana JWT token        │
 │      │  Token dikembalikan ke frontend                             │
 │      ▼                                                             │
 │  ApplicantPortalPage.tsx menyimpan token dalam sessionStorage      │
