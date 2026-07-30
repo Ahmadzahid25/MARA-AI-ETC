@@ -36,6 +36,7 @@ Temporary execution priority is defined in [17-vertical-slice-execution-directiv
 | 15 | [15-risk-assessment.md](15-risk-assessment.md) | Technical/business/security/operational/AI/scaling risks |
 | 16 | [16-future-expansion.md](16-future-expansion.md) | Voice-first, mobile, MCP servers, gov integrations |
 | 17 | [17-vertical-slice-execution-directive.md](17-vertical-slice-execution-directive.md) | Temporary delivery-order directive: vertical slice first, then roadmap handback |
+| 18 | [18-per-branch-database-schema.md](18-per-branch-database-schema.md) | Per-branch database architecture (10 tables, multi-tenant isolation, login flow & national aggregation) |
 
 ## Non-negotiable principles
 
