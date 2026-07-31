@@ -1,0 +1,357 @@
+/* ===== Splash ===== */
+.splashOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.5s;
+  opacity: 1;
+}
+
+.splashFadeOut {
+  opacity: 0;
+}
+
+.splashVideo {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.skipButton {
+  position: absolute;
+  bottom: 2rem;
+  right: 2rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: #525252;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: none;
+  cursor: pointer;
+}
+
+.skipButton:hover {
+  background: #fff;
+}
+
+/* ===== Layout ===== */
+.container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+
+.visible {
+  opacity: 1;
+}
+
+/* ===== Brand Panel (left) ===== */
+.brandPanel {
+  background: #0B1220;
+  padding: 2.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  color: #fff;
+}
+
+.brandHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 2.5rem;
+}
+
+.logoBox {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logoBox img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.brandTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.brandSubtitle {
+  font-size: 12px;
+  color: #8A93A6;
+  line-height: 1.3;
+}
+
+.featureList {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  flex: 1;
+}
+
+.featureItem {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.featureIconBox {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  background: #132018;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.featureIconBox svg {
+  color: #5DCAA5;
+  width: 16px;
+  height: 16px;
+}
+
+.featureTitle {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #fff;
+  margin: 0;
+}
+
+.featureDesc {
+  font-size: 12.5px;
+  color: #8A93A6;
+  line-height: 1.5;
+  margin: 2px 0 0 0;
+}
+
+.brandFooter {
+  font-size: 11px;
+  color: #5A6478;
+  margin-top: auto;
+}
+
+/* ===== Login Column (right) ===== */
+.loginColumn {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2.5rem 3rem;
+  background: #fff;
+}
+
+.loginCard {
+  max-width: 460px;
+  width: 100%;
+}
+
+.iconBadge {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #EEF2FF;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.iconBadge img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.heading {
+  font-size: 20px;
+  font-weight: 500;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+}
+
+.description {
+  font-size: 14px;
+  color: #64748B;
+  line-height: 1.5;
+  margin: 0 0 1.5rem 0;
+}
+
+/* ===== Button base ===== */
+.button {
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.buttonIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
+.buttonIcon svg {
+  width: 1em;
+  height: 1em;
+}
+
+.buttonLabel {
+  white-space: normal;
+}
+
+/* Primary CTA */
+.primaryButton {
+  min-height: 44px;
+  padding: 10px 16px;
+  background: #4F46E5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.primaryButton:hover {
+  background: #4338CA;
+}
+
+/* Divider */
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1.5rem 0 1rem;
+}
+
+.dividerLine {
+  flex: 1;
+  height: 0.5px;
+  background: #CBD5E1;
+}
+
+.dividerLabel {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+/* Secondary (SSO) */
+.secondaryButton {
+  min-height: 44px;
+  padding: 10px 16px;
+  background: transparent;
+  border: 0.5px solid #CBD5E1;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #475569;
+  transition: background 0.15s;
+  margin-bottom: 10px;
+}
+
+.secondaryButton:hover {
+  background: #F8FAFC;
+}
+
+/* Tertiary (dev mock) */
+.tertiaryButton {
+  min-height: 40px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 0.5px dashed #CBD5E1;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 400;
+  color: #64748B;
+  transition: background 0.15s;
+}
+
+.tertiaryButton:hover {
+  background: #F8FAFC;
+}
+
+.devBadge {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  background: #FEF3C7;
+  color: #92400E;
+  padding: 1px 6px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+/* ===== Milestone Card ===== */
+.milestoneCard {
+  margin-top: 1.5rem;
+  padding: 12px 14px;
+  background: #F8FAFC;
+  border-radius: 8px;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.milestoneIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  color: #94A3B8;
+}
+
+.milestoneTitle {
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  margin: 0;
+}
+
+.milestoneSubtitle {
+  font-size: 12px;
+  color: #64748B;
+  margin: 2px 0 0 0;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 767px) {
+  .container {
+    grid-template-columns: 1fr;
+  }
+
+  .brandPanel {
+    display: none;
+  }
+
+  .loginColumn {
+    padding: 2rem 1.25rem;
+  }
+}
