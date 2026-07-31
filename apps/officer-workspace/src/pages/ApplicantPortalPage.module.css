@@ -1,0 +1,38 @@
+.authCard :global(label.flex.flex-col.gap-y-2 > div.flex.flex-row.items-center) {
+  min-height: 44px;
+  padding-block: 0;
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+}
+
+.authCard :global(label.flex.flex-col.gap-y-2 > div.flex.flex-row.items-center:focus-within) {
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: #6c5ce7;
+}
+
+.authCard :global(label.flex.flex-col.gap-y-2 > span:empty) {
+  display: none;
+}
+
+.authCard :global(button.w-full.justify-center) {
+  margin-top: 1.5rem;
+  min-height: 46px;
+  border-radius: 8px;
+  background-color: #6c5ce7;
+  --tw-ring-color: rgba(108, 92, 231, 0.35);
+  box-shadow: none;
+}
+
+.authCard :global(button.w-full.justify-center span) {
+  color: #ffffff;
+}
+
+.authCard :global(button.w-full.justify-center:hover:not(:disabled)),
+.authCard :global(button.w-full.justify-center:focus-visible:not(:disabled)) {
+  background-color: #5b4bd6;
+}
+
+.authCard :global(button.w-full.justify-center:focus-visible:not(:disabled)) {
+  box-shadow: 0 0 0 2px rgba(108, 92, 231, 0.5);
+}

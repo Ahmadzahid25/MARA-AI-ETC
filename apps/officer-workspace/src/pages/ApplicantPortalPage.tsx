@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button, Chip, Input, Typography } from '@openhands/ui';
+import styles from './ApplicantPortalPage.module.css';
 import {
   ApiError,
   createApplicantApplication,
@@ -45,6 +46,7 @@ function statusColor(status: V1ApplicationStatus): 'gray' | 'green' | 'red' | 'p
 
 export function ApplicantPortalPage() {
   const [view, setView] = useState<PortalView>('overview');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [authMode, setAuthMode] = useState<AuthMode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -166,35 +168,62 @@ export function ApplicantPortalPage() {
       <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur-md dark:border-[#222328] dark:bg-[#131417]/90 md:px-8">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-md bg-indigo-600 text-sm font-bold text-white">M</div>
+            <button type="button" onClick={() => setMobileNavOpen(true)} aria-label="Buka menu" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#222328] md:hidden">
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /></svg>
+            </button>
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white">
+              <img src="/favicon.png" alt="Logo MARA AI-ETC" className="h-[22px] w-[22px] object-contain" />
+            </div>
             <div><p className="text-sm font-semibold">MARA AI-ETC</p><p className="text-xs text-slate-500 dark:text-slate-400">Portal Permohonan</p></div>
           </div>
-          <a href="/login" className="text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300">Log masuk pegawai</a>
+          <a href="/login" className="text-[13px] font-medium text-indigo-700 hover:text-[#5B4BD6] hover:underline dark:text-indigo-300 dark:hover:text-[#8B7CF8] md:text-sm">Log masuk pegawai</a>
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl md:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="border-b border-slate-200 bg-white p-4 dark:border-[#222328] dark:bg-[#131417] md:min-h-[calc(100vh-61px)] md:border-b-0 md:border-r">
-          <p className="mb-3 px-3 text-xs font-semibold uppercase text-slate-400">Permohonan saya</p>
-          <nav className="flex gap-1 overflow-x-auto md:flex-col">
-            {navItems.map((item) => <button key={item.id} type="button" disabled={item.disabled} onClick={() => setView(item.id)} className={`shrink-0 rounded-md px-3 py-2 text-left text-sm font-medium transition-colors ${view === item.id ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-[#222328]'} disabled:cursor-not-allowed disabled:opacity-40`}>{item.label}</button>)}
-          </nav>
+      {mobileNavOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-xs dark:bg-black/60" onClick={() => setMobileNavOpen(false)} />
+          <div className="absolute left-0 top-0 flex h-full w-72 flex-col bg-white shadow-xl dark:bg-[#131417]">
+            <div className="flex items-center justify-between border-b border-slate-200 p-3 dark:border-[#222328]">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white">
+                  <img src="/favicon.png" alt="Logo MARA AI-ETC" className="h-[22px] w-[22px] object-contain" />
+                </div>
+                <span className="text-sm font-semibold">MARA AI-ETC</span>
+              </div>
+              <button type="button" onClick={() => setMobileNavOpen(false)} aria-label="Tutup menu" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-[#222328]">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="overflow-y-auto p-3">
+              <p className="mb-2 px-4 text-xs font-semibold uppercase text-slate-400">Permohonan saya</p>
+              <PortalNav items={navItems} active={view} onSelect={(id) => { setView(id); setMobileNavOpen(false); }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mx-auto grid max-w-7xl md:grid-cols-[220px_minmax(0,1fr)] lg:grid-cols-[260px_minmax(0,1fr)]">
+        <aside className="hidden shrink-0 border-b border-slate-200 bg-white p-4 dark:border-[#222328] dark:bg-[#131417] md:sticky md:top-[61px] md:block md:max-h-[calc(100vh-61px)] md:overflow-y-auto md:border-b-0 md:border-r">
+          <p className="mb-3 px-4 text-xs font-semibold uppercase text-slate-400">Permohonan saya</p>
+          <PortalNav items={navItems} active={view} onSelect={setView} />
           {applicationId && <div className="mt-6 border-t border-slate-200 pt-4 dark:border-[#222328]"><p className="text-xs text-slate-500">ID permohonan</p><p className="mt-1 break-all font-mono text-xs font-semibold">{applicationId}</p></div>}
         </aside>
 
         <main className="min-w-0 p-4 md:p-8">
-          {!signedIn ? <section className="mx-auto max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm dark:border-[#222328] dark:bg-[#131417]">
-            <p className="text-xs font-semibold uppercase text-indigo-600 dark:text-indigo-300">Akses pemohon</p>
+          {!signedIn ? <section className={`${styles.authCard} mx-auto max-w-[480px] rounded-lg border border-[#222328] bg-[#131417] p-5 text-slate-100 shadow-sm md:p-6`}>
+            <p className="text-xs font-semibold uppercase text-[#8B7CF8]">Akses pemohon</p>
             <Typography.H3 className="mt-2">{authMode === 'login' ? 'Log masuk untuk meneruskan' : 'Daftar akaun pemohon'}</Typography.H3>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Permohonan anda disimpan ke sistem hanya selepas pengesahan berjaya.</p>
+            <p className="mt-2 text-sm text-slate-400">Permohonan anda disimpan ke sistem hanya selepas pengesahan berjaya.</p>
             {authError && <Alert message={authError} />}
             <form className="mt-6 space-y-4" onSubmit={authenticate}>
               {authMode === 'register' && <Input label="Nama penuh" value={fullName} onChange={(event) => setFullName(event.target.value)} required />}
               <Input label="Alamat e-mel" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
               <Input label="Kata laluan" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+              {authMode === 'login' && <div className="flex justify-end -mt-2"><a href="#" onClick={(event) => event.preventDefault()} className="text-xs font-medium text-[#8B7CF8] hover:underline">Lupa kata laluan?</a></div>}
               <Button type="submit" variant="primary" className="w-full justify-center" disabled={authLoading}>{authLoading ? 'Memproses...' : authMode === 'login' ? 'Log masuk' : 'Daftar akaun'}</Button>
             </form>
-            <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="mt-4 text-sm font-medium text-indigo-700 hover:underline dark:text-indigo-300">{authMode === 'login' ? 'Belum mempunyai akaun? Daftar' : 'Sudah mempunyai akaun? Log masuk'}</button>
+            <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="mt-4 text-sm font-medium text-[#8B7CF8] hover:text-[#A89BFB] hover:underline">{authMode === 'login' ? 'Belum mempunyai akaun? Daftar' : 'Sudah mempunyai akaun? Log masuk'}</button>
           </section> : <>
             {view === 'overview' && <Overview applicationId={applicationId} status={status} uploadedCount={uploadedCount} onStart={() => setView('application')} onStatus={() => refreshStatus()} />}
             {view === 'application' && <ApplicationForm error={formError} submitting={submitting} applicantName={applicantName} setApplicantName={setApplicantName} icNumber={icNumber} setIcNumber={setIcNumber} phone={phone} setPhone={setPhone} email={email} businessName={businessName} setBusinessName={setBusinessName} ssmNumber={ssmNumber} setSsmNumber={setSsmNumber} sector={sector} setSector={setSector} scheme={scheme} setScheme={setScheme} amountRequested={amountRequested} setAmountRequested={setAmountRequested} purpose={purpose} setPurpose={setPurpose} onSubmit={submitApplication} />}
@@ -207,7 +236,15 @@ export function ApplicantPortalPage() {
   );
 }
 
-function Alert({ message }: { message: string }) { return <div role="alert" className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 dark:border-rose-900 dark:bg-rose-950/30 dark:text-rose-200">{message}</div>; }
+function Alert({ message }: { message: string }) { return <div role="alert" className="mt-4 rounded-md border border-rose-900 bg-rose-950/30 p-3 text-sm text-rose-200">{message}</div>; }
+
+function PortalNav({ items, active, onSelect }: { items: Array<{ id: PortalView; label: string; disabled?: boolean }>; active: PortalView; onSelect: (id: PortalView) => void }) {
+  return (
+    <nav className="flex flex-col gap-1">
+      {items.map((item) => <button key={item.id} type="button" disabled={item.disabled} onClick={() => onSelect(item.id)} className={`rounded-lg px-4 py-2.5 text-left text-sm font-medium transition-colors ${active === item.id ? 'bg-[#6C5CE7] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/5 dark:hover:text-white'} disabled:cursor-not-allowed disabled:opacity-40`}>{item.label}</button>)}
+    </nav>
+  );
+}
 
 function Overview({ applicationId, status, uploadedCount, onStart, onStatus }: { applicationId: string | null; status: V1ApplicationStatusOutput | null; uploadedCount: number; onStart: () => void; onStatus: () => void }) {
   return <div className="space-y-6"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-semibold uppercase text-indigo-600 dark:text-indigo-300">Dashboard pemohon</p><Typography.H2 className="mt-1">Permohonan pembiayaan</Typography.H2><p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Lengkapkan maklumat dan dokumen sebelum semakan pegawai MARA.</p></div><Button variant="primary" onClick={onStart}>{applicationId ? 'Permohonan baharu' : 'Mulakan permohonan'}</Button></div><div className="grid gap-4 sm:grid-cols-3"><Metric label="Status" value={status ? statusLabel(status.status) : 'Belum dimulakan'} /><Metric label="Dokumen lengkap" value={`${uploadedCount} / 3`} /><Metric label="Permohonan" value={applicationId ? '1 aktif' : 'Tiada'} /></div>{applicationId && status ? <section className="rounded-lg border border-slate-200 bg-white p-5 dark:border-[#222328] dark:bg-[#131417]"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="font-semibold">{applicationId}</p><p className="mt-1 text-sm text-slate-500">Dikemas kini {new Date(status.updated_at).toLocaleString('ms-MY')}</p></div><Chip color={statusColor(status.status)} variant="pill">{statusLabel(status.status)}</Chip><Button variant="secondary" onClick={onStatus}>Lihat status</Button></div></section> : <section className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center dark:border-[#3a3c42] dark:bg-[#131417]"><p className="font-medium">Tiada permohonan aktif</p><p className="mt-1 text-sm text-slate-500">Mulakan dengan borang permohonan pembiayaan.</p></section>}</div>;

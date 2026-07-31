@@ -1,9 +1,12 @@
 /* ===== Splash ===== */
 .splashOverlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100dvh;
   z-index: 50;
-  background: #fff;
+  background: #f2f4f5;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,9 +25,11 @@
 }
 
 .skipButton {
-  position: absolute;
-  bottom: 2rem;
-  right: 2rem;
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+  right: 24px;
+  min-height: 44px;
+  min-width: 44px;
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.8);
   padding: 0.5rem 1rem;
@@ -43,7 +48,9 @@
 .container {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  min-height: 100vh;
+  min-height: 100vh !important;
+  margin: 0 !important;           /* no outer margin — must sit flush in viewport */
+  padding: 0 !important;          /* no padding — any padding here insets BOTH columns */
   opacity: 0;
   transition: opacity 0.5s;
 }
@@ -54,34 +61,47 @@
 
 /* ===== Brand Panel (left) ===== */
 .brandPanel {
-  background: #0B1220;
+  background: linear-gradient(135deg, #0F1E1A 0%, #0B1220 60%);
   padding: 2.5rem 2rem;
   display: flex;
   flex-direction: column;
   color: #fff;
+  /* Full-bleed: panel must touch top / left / bottom viewport edges */
+  height: 100% !important;        /* fill the grid row height */
+  min-height: 100vh !important;   /* guarantee full viewport height even if content is short */
+  margin: 0 !important;           /* never float away from the edge */
+  border-radius: 0 !important;    /* no rounded corners — this is a full-bleed column, not a card */
+  box-sizing: border-box !important;
+}
+
+.brandPanelContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3rem;
 }
 
 .brandHeader {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 2.5rem;
 }
 
 .logoBox {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
   background: #fff;
-  border-radius: 8px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .logoBox img {
-  width: 22px;
-  height: 22px;
+  width: 26px;
+  height: 26px;
   object-fit: contain;
 }
 
@@ -102,7 +122,6 @@
   display: flex;
   flex-direction: column;
   gap: 22px;
-  flex: 1;
 }
 
 .featureItem {
@@ -151,12 +170,14 @@
 
 /* ===== Login Column (right) ===== */
 .loginColumn {
-  height: 100%;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+  height: 100%;
+  min-height: 100vh;
   padding: 2.5rem 3rem;
+  box-sizing: border-box;
   background: #fff;
 }
 
@@ -173,7 +194,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.25rem;
+}
+
+.brandRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.brandName {
+  font-size: 17px;
+  font-weight: 600;
+  color: #1E293B;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.brandRole {
+  font-size: 12px;
+  color: #64748B;
+  line-height: 1.3;
+  margin: 2px 0 0 0;
 }
 
 .iconBadge img {

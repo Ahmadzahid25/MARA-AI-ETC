@@ -4,4 +4,28 @@
 @import '../../../packages/openhands-ui/tokens.css';
 @config "../tailwind.config.ts";
 
+@source "../../../packages/openhands-ui/components";
+@source "../../../packages/openhands-ui/index.ts";
+
 @custom-variant dark (&:where(.dark, .dark *));
+
+/* ===== Hard reset: eliminate browser-default body margin (8px) that
+   causes white gaps around full-bleed layouts like the login split-view ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0 !important;
+  padding: 0 !important;
+  height: 100% !important;
+}
+
+#root {
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 100vh !important;
+}
