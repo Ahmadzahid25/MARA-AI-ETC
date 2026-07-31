@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 import asyncpg
@@ -97,7 +98,9 @@ def create_app(
                 except Exception:
                     pool = None
                 if pool is not None:
-                    app.state.vertical_slice_store = AsyncpgVerticalSliceStore(pool)
+                    app.state.vertical_slice_store = AsyncpgVerticalSliceStore(
+                        pool, branch_code=settings.branch.code
+                    )
 
                     async def _close_pool() -> None:
                         await pool.close()
@@ -105,6 +108,21 @@ def create_app(
                     app.state._close_vertical_slice_pool = _close_pool
 
                 await seed_default_users(app.state.vertical_slice_store)
+
+        # A local frontend should still be able to exercise registration,
+        # application submission, document upload, and status APIs when the
+        # optional Docker stack is not running. Real checkpointed workflows
+        # remain the default outside dev, and can be enabled locally once the
+        # infrastructure is available.
+        if env == 'dev' and os.getenv('MARA_ENABLE_REAL_WORKFLOWS', '').lower() not in {
+            'true',
+            '1',
+        }:
+            app.state.workflow = None
+            app.state.loan_workflow = None
+            app.state.audit_writer = None
+            yield
+            return
 
         from services.api_gateway.composition import (
             build_real_audit_writer,

@@ -41,19 +41,29 @@ EventType = Literal[
     'correction',
     'escalation',
     'permission_check',
+    'login',
+    'document_upload',
+    'status_change',
 ]
 
 
 class AuditEvent(BaseModel):
     """One row of ``audit_memory``. ``id``/``occurred_at`` are ``None`` on
     a not-yet-written event (set by the database on insert, per the
-    table's ``GENERATED ALWAYS AS IDENTITY`` / ``DEFAULT now()``)."""
+    table's ``GENERATED ALWAYS AS IDENTITY`` / ``DEFAULT now()``).
+
+    ``branch_code`` defaults to ``'hq'`` so the approval-service write path
+    (which is branch-agnostic) keeps working on the single-DB dev stack;
+    per-branch deployments override it from ``settings.branch.code`` so the
+    audit row is attributable to the branch database it lives in
+    (docs/architecture/18-per-branch-database-schema.md §3 Jadual 8)."""
 
     id: int | None = None
     occurred_at: datetime | None = None
     workflow_id: str | None = None
     actor_id: str = Field(min_length=1)
     actor_role: str = Field(min_length=1)
+    branch_code: str = Field(default='hq', min_length=1)
     event_type: EventType
     payload: dict[str, Any] = Field(default_factory=dict)
 
@@ -93,12 +103,13 @@ async def write_audit_event(pool: asyncpg.Pool, event: AuditEvent) -> None:
     await pool.execute(
         """
         INSERT INTO audit_memory
-            (workflow_id, actor_id, actor_role, event_type, payload)
-        VALUES ($1, $2, $3, $4, $5::jsonb)
+            (workflow_id, actor_id, actor_role, branch_code, event_type, payload)
+        VALUES ($1, $2, $3, $4, $5, $6::jsonb)
         """,
         event.workflow_id,
         event.actor_id,
         event.actor_role,
+        event.branch_code,
         event.event_type,
         json.dumps(event.payload),
     )
@@ -135,7 +146,8 @@ async def query_audit_events(
     where_clause = f'WHERE {" AND ".join(conditions)}' if conditions else ''
     params.append(filters.limit)
     query = f"""
-        SELECT id, occurred_at, workflow_id, actor_id, actor_role, event_type, payload
+        SELECT id, occurred_at, workflow_id, actor_id, actor_role,
+               branch_code, event_type, payload
         FROM audit_memory
         {where_clause}
         ORDER BY occurred_at DESC
@@ -154,6 +166,7 @@ def _row_to_event(row: asyncpg.Record) -> AuditEvent:
         workflow_id=str(row['workflow_id']) if row['workflow_id'] is not None else None,
         actor_id=row['actor_id'],
         actor_role=row['actor_role'],
+        branch_code=row['branch_code'] if 'branch_code' in row.keys() else 'hq',
         event_type=row['event_type'],
         payload=json.loads(payload) if isinstance(payload, str) else payload,
     )

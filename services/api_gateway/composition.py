@@ -95,7 +95,12 @@ async def build_real_audit_writer(
     async with audit_pool(settings) as pool:
 
         async def _write(record) -> None:
-            await write_audit_event(pool, approval_record_to_audit_event(record))
+            await write_audit_event(
+                pool,
+                approval_record_to_audit_event(
+                    record, branch_code=settings.branch.code
+                ),
+            )
 
         yield _write
 
