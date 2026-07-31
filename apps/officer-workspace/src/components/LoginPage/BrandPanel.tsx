@@ -27,28 +27,30 @@ const features = [
 export function BrandPanel() {
   return (
     <div className={styles.brandPanel}>
-      <div className={styles.brandHeader}>
-        <div className={styles.logoBox}>
-          <img src="/favicon.png" alt="Logo MARA AI-ETC" />
-        </div>
-        <div>
-          <div className={styles.brandTitle}>MARA AI-ETC</div>
-          <div className={styles.brandSubtitle}>Officer workspace</div>
-        </div>
-      </div>
-
-      <div className={styles.featureList}>
-        {features.map(({ icon, title, desc }) => (
-          <div key={title} className={styles.featureItem}>
-            <div className={styles.featureIconBox}>
-              <Icon icon={icon} size={16} />
-            </div>
-            <div>
-              <p className={styles.featureTitle}>{title}</p>
-              <p className={styles.featureDesc}>{desc}</p>
-            </div>
+      <div className={styles.brandPanelContent}>
+        <div className={styles.brandHeader}>
+          <div className={styles.logoBox}>
+            <img src="/favicon.png" alt="Logo MARA AI-ETC" />
           </div>
-        ))}
+          <div>
+            <div className={styles.brandTitle}>MARA AI-ETC</div>
+            <div className={styles.brandSubtitle}>Officer workspace</div>
+          </div>
+        </div>
+
+        <div className={styles.featureList}>
+          {features.map(({ icon, title, desc }) => (
+            <div key={title} className={styles.featureItem}>
+              <div className={styles.featureIconBox}>
+                <Icon icon={icon} size={16} />
+              </div>
+              <div>
+                <p className={styles.featureTitle}>{title}</p>
+                <p className={styles.featureDesc}>{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <p className={styles.brandFooter}>

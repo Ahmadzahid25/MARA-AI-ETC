@@ -6,8 +6,14 @@ export function LoginCard() {
   return (
     <div className={styles.loginColumn}>
       <div className={styles.loginCard}>
-        <div className={styles.iconBadge}>
-          <img src="/favicon.png" alt="Logo MARA AI-ETC" />
+        <div className={styles.brandRow}>
+          <div className={styles.iconBadge}>
+            <img src="/favicon.png" alt="Logo MARA AI-ETC" />
+          </div>
+          <div>
+            <p className={styles.brandName}>MARA AI-ETC</p>
+            <p className={styles.brandRole}>Officer Workspace</p>
+          </div>
         </div>
 
       <h1 className={styles.heading}>Log masuk pegawai</h1>
