@@ -34,22 +34,49 @@ CONFIGS_DIR = REPO_ROOT / 'configs'
 Environment = Literal['dev', 'staging', 'production']
 
 
+class BranchSettings(BaseSettings):
+    """Konfigurasi khusus cawangan — docs/architecture/
+    18-per-branch-database-schema.md §7. Setiap instance API Gateway berjalan
+    untuk satu cawangan pada satu masa; kod cawangan ditentukan oleh
+    ``MARA_BRANCH_CODE`` (env) supaya audit log, no. rujukan permohonan, dan
+    routing database konsisten sepanjang proses.
+    """
+
+    code: str = Field(
+        default='hq',
+        description='Kod cawangan (hq, sel, kel, joh, prk, trg, nsn, kdh).',
+    )
+    name: str = Field(default='Ibu Pejabat')
+    state: str = Field(default='Wilayah Persekutuan')
+
+
 class DatabaseSettings(BaseSettings):
     """Two separate database instances by design — see docs/architecture/
     09-knowledge-architecture.md §9.1.1 (ACCB Condition C-5): the platform's
     primary Postgres (conversations/tasks/shared/audit memory, workflow
     checkpoints) must never be the same instance as Dify's own operational
     database.
+
+    Dengan sokongan multi-cawangan (docs/architecture/
+    18-per-branch-database-schema.md), ``primary_dsn`` menunjuk ke database
+    cawangan semasa (cth ``mara_sel``) dan ``national_dsn`` ke database
+    agregat HQ (``mara_national``) — hanya digunakan oleh proses batch HQ.
     """
 
     primary_dsn: PostgresDsn = Field(
-        default='postgresql+asyncpg://mara:mara@localhost:5432/mara_platform',
-        description='Primary Postgres: memory, audit, workflow checkpoints, pgvector.',
+        default='postgresql+asyncpg://mara:mara@localhost:5432/mara_hq',
+        description='Primary Postgres cawangan semasa: memory, audit, '
+        'workflow checkpoints, pgvector.',
     )
     dify_dsn: PostgresDsn = Field(
         default='postgresql+asyncpg://dify:dify@localhost:5433/dify',
         description="Dify's own operational database — a separate instance, "
         'never shared',
+    )
+    national_dsn: PostgresDsn | None = Field(
+        default=None,
+        description='DSN pangkalan data nasional (mara_national) — hanya '
+        'untuk HQ & laporan agregat cross-cawangan.',
     )
 
 
@@ -141,6 +168,14 @@ class Settings(BaseSettings):
 
     environment: Environment = Field(default='dev')
 
+    # ``app.py``'s lifespan reads ``getattr(settings, 'debug', False)`` to decide
+    # whether to back the vertical-slice store with real Postgres in dev
+    # (``use_db_store``). Adding the field here makes that switch real and
+    # settable via ``MARA_DEBUG=true`` instead of always falling back to the
+    # in-memory store. Defaults False so existing dev behavior is unchanged.
+    debug: bool = Field(default=False)
+
+    branch: BranchSettings = Field(default_factory=BranchSettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     object_storage: ObjectStorageSettings = Field(default_factory=ObjectStorageSettings)
     redis: RedisSettings = Field(default_factory=RedisSettings)

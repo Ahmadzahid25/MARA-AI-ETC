@@ -19,16 +19,24 @@ _EVENT_TYPE_BY_ACTION: dict[ApprovalAction, EventType] = {
 }
 
 
-def approval_record_to_audit_event(record: ApprovalRecord) -> AuditEvent:
+def approval_record_to_audit_event(
+    record: ApprovalRecord, branch_code: str = 'hq'
+) -> AuditEvent:
     """docs/architecture/14-roadmap.md §14.3's acceptance criterion — "a
     correction is fully attributable in Audit Memory" — is this function:
     every field of the officer's decision, including individual field
-    corrections, lands in the event payload, not just a pass/fail flag."""
+    corrections, lands in the event payload, not just a pass/fail flag.
+
+    ``branch_code`` stamps which branch database the event belongs to
+    (docs/architecture/18-per-branch-database-schema.md §3 Jadual 8); the
+    composition root passes ``settings.branch.code`` here at startup.
+    """
 
     return AuditEvent(
         workflow_id=record.workflow_thread_id,
         actor_id=record.actor,
         actor_role='officer',
+        branch_code=branch_code,
         event_type=_EVENT_TYPE_BY_ACTION[record.action],
         payload={
             'document_id': record.document_id,

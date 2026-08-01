@@ -308,6 +308,33 @@ async def register(
     return AuthTokenOutput(user_id=user_id, role=role, access_token=token)
 
 
+@router.post('/auth/login', response_model=AuthTokenOutput)
+async def login(
+    body: AuthLoginInput,
+    store: VerticalSliceStore = Depends(get_vertical_slice_store),
+) -> AuthTokenOutput:
+    email = body.email.strip().lower()
+    user = await store.get_user_by_email(email)
+    if user is None or not hmac.compare_digest(
+        user['password_hash'], _hash_password(body.password)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Invalid email or password',
+        )
+
+    user_id = user['user_id']
+    role = UserRole(user['role'])
+    token = _issue_token(user_id, role)
+    await store.append_audit(
+        actor=user_id,
+        action='login',
+        application_id=None,
+        payload={'email': email},
+    )
+    return AuthTokenOutput(user_id=user_id, role=role, access_token=token)
+
+
 @router.post('/applications/{application_id}/documents')
 async def upload_application_document(
     application_id: str,

@@ -22,7 +22,6 @@ from typing import TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from shared.config import Settings
-from shared.workflow_engine.checkpointer import postgres_checkpointer
 
 
 class SyntheticTraceState(TypedDict):
@@ -58,6 +57,8 @@ async def run_synthetic_trace(
     resulting trace is actually visible per the Milestone 0 acceptance
     criterion, not just executed silently.
     """
+
+    from shared.workflow_engine.checkpointer import postgres_checkpointer
 
     graph = build_synthetic_trace_graph()
     async with postgres_checkpointer(settings) as checkpointer:

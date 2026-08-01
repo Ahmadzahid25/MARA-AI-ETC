@@ -89,6 +89,8 @@ class TestWriteAuditEvent:
             'wf-1',
             'officer-1',
             'officer',
+            'hq',  # branch_code — AuditEvent default (docs/architecture/
+            # 18-per-branch-database-schema.md §3 Jadual 8)
             'approval',
             '{"document_id": "doc-1"}',
         )

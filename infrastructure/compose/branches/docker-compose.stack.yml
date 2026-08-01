@@ -1,0 +1,210 @@
+﻿# MARA AI-ETC â€” Per-Branch Database Stack
+#
+# Menjalankan 9 instance PostgreSQL berasingan di atas satu pelayan Proxmox/Ubuntu:
+#   - 8 database cawangan (HQ + Selangor, Kelantan, Johor, Perak, Terengganu,
+#     Negeri Sembilan, Kedah) â€” skema penuh per-cawangan
+#   - 1 database nasional (mara_national) â€” agregat KPI/laporan HQ
+#
+# Setiap cawangan menggunakan skema template yang sama (init/branch-init.sql)
+# dengan pengasingan data mutlak antara satu sama lain.
+#
+# Konsep & justifikasi: docs/architecture/18-per-branch-database-schema.md.
+#
+# KATA LALUAN DB dibaca dari fail `.env` (gitignored) â€” jangan hardcode di sini.
+# Contoh .env: infrastructure/compose/branches/env.example
+#
+# Jalankan:
+#   docker compose -f infrastructure/compose/branches/docker-compose.stack.yml --env-file .env up -d
+# atau (per-cawangan tunggal):
+#   docker compose -f infrastructure/compose/branches/docker-compose.branch.yml --env-file .env.hq up -d
+#
+# Verifikasi:
+#   docker compose -f infrastructure/compose/branches/docker-compose.stack.yml config --quiet
+#
+# **Status: belum dijalankan dalam persekitaran ini (tiada Docker).** Validasi
+# dengan `docker compose config` dan `up` sebelum digunakan dalam pengeluaran.
+
+x-postgres-base: &postgres-base
+  image: pgvector/pgvector:pg16
+  restart: unless-stopped
+  healthcheck:
+    # POSTGRES_DB diset per-service, jadi guna pembolehubah persekitaran kontena
+    test: ["CMD-SHELL", "pg_isready -U mara -d \"$$POSTGRES_DB\""]
+    interval: 10s
+    timeout: 5s
+    retries: 10
+
+services:
+
+  # â”€â”€ HQ (Ibu Pejabat) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  postgres-hq:
+    <<: *postgres-base
+    container_name: mara-postgres-hq
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mara_hq
+    ports:
+      - "5432:5432"
+    volumes:
+      - mara_data_hq:/var/lib/postgresql/data
+      - ../init/branch-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    labels:
+      mara.branch: "hq"
+      mara.component: "database"
+
+  # â”€â”€ Selangor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  postgres-sel:
+    <<: *postgres-base
+    container_name: mara-postgres-sel
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mara_sel
+    ports:
+      - "5433:5432"
+    volumes:
+      - mara_data_sel:/var/lib/postgresql/data
+      - ../init/branch-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    labels:
+      mara.branch: "sel"
+      mara.component: "database"
+
+  # â”€â”€ Kelantan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  postgres-kel:
+    <<: *postgres-base
+    container_name: mara-postgres-kel
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mara_kel
+    ports:
+      - "5434:5432"
+    volumes:
+      - mara_data_kel:/var/lib/postgresql/data
+      - ../init/branch-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    labels:
+      mara.branch: "kel"
+      mara.component: "database"
+
+  # â”€â”€ Johor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  postgres-joh:
+    <<: *postgres-base
+    container_name: mara-postgres-joh
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mara_joh
+    ports:
+      - "5435:5432"
+    volumes:
+      - mara_data_joh:/var/lib/postgresql/data
+      - ../init/branch-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    labels:
+      mara.branch: "joh"
+      mara.component: "database"
+
+  # â”€â”€ Perak â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  postgres-prk:
+    <<: *postgres-base
+    container_name: mara-postgres-prk
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mara_prk
+    ports:
+      - "5436:5432"
+    volumes:
+      - mara_data_prk:/var/lib/postgresql/data
+      - ../init/branch-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    labels:
+      mara.branch: "prk"
+      mara.component: "database"
+
+  # â”€â”€ Terengganu â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  postgres-trg:
+    <<: *postgres-base
+    container_name: mara-postgres-trg
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mara_trg
+    ports:
+      - "5437:5432"
+    volumes:
+      - mara_data_trg:/var/lib/postgresql/data
+      - ../init/branch-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    labels:
+      mara.branch: "trg"
+      mara.component: "database"
+
+  # â”€â”€ Negeri Sembilan â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  postgres-nsn:
+    <<: *postgres-base
+    container_name: mara-postgres-nsn
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mara_nsn
+    ports:
+      - "5438:5432"
+    volumes:
+      - mara_data_nsn:/var/lib/postgresql/data
+      - ../init/branch-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    labels:
+      mara.branch: "nsn"
+      mara.component: "database"
+
+  # â”€â”€ Kedah â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  postgres-kdh:
+    <<: *postgres-base
+    container_name: mara-postgres-kdh
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mara_kdh
+    ports:
+      - "5439:5432"
+    volumes:
+      - mara_data_kdh:/var/lib/postgresql/data
+      - ../init/branch-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    labels:
+      mara.branch: "kdh"
+      mara.component: "database"
+
+  # â”€â”€ National (Agregat HQ) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  postgres-national:
+    <<: *postgres-base
+    container_name: mara-postgres-national
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mara_national
+    ports:
+      - "5440:5432"
+    volumes:
+      - mara_data_national:/var/lib/postgresql/data
+      - ../init/national-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    labels:
+      mara.branch: "national"
+      mara.component: "database"
+
+volumes:
+  mara_data_hq:
+    driver: local
+  mara_data_sel:
+    driver: local
+  mara_data_kel:
+    driver: local
+  mara_data_joh:
+    driver: local
+  mara_data_prk:
+    driver: local
+  mara_data_trg:
+    driver: local
+  mara_data_nsn:
+    driver: local
+  mara_data_kdh:
+    driver: local
+  mara_data_national:
+    driver: local

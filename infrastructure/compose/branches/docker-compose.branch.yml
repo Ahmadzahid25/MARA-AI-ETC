@@ -1,0 +1,46 @@
+# MARA AI-ETC — Template Docker Compose untuk SATU cawangan.
+#
+# Jalankan dengan --project-name (-p) untuk pengasingan volume per-cawangan:
+#   docker compose -p sel \
+#     -f infrastructure/compose/branches/docker-compose.branch.yml \
+#     --env-file infrastructure/compose/branches/.env.sel up -d
+#
+# container_name, POSTGRES_DB, port, dan label boleh guna interpolasi ${...}
+# dari fail .env. Nama service dan top-level volume mesti statik (compose tidak
+# benarkan interpolasi dalam key struktur) — pengasingan data dicapai melalui
+# project name (-p) yang auto-menamakan volume (cth: `sel_mara_data_branch`).
+#
+# KATA LALUAN DB dibaca dari ${DB_PASSWORD} dalam fail .env (gitignored).
+#
+# **Status: belum dijalankan dalam persekitaran ini.** Validasi dengan
+# `docker compose config` sebelum digunakan dalam pengeluaran.
+
+services:
+  postgres-branch:
+    image: pgvector/pgvector:pg16
+    container_name: mara-postgres-${BRANCH_CODE}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mara
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: mara_${BRANCH_CODE}
+    ports:
+      - "${PORT_PRIMARY}:5432"
+    volumes:
+      - mara_data_branch:/var/lib/postgresql/data
+      # Path relatif kepada fail ini (branches/) — ../init/ = infrastructure/compose/init/
+      - ../init/branch-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mara -d \"$$POSTGRES_DB\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    labels:
+      mara.branch: "${BRANCH_CODE}"
+      mara.component: "database"
+
+volumes:
+  # Nama statik; pengasingan per-cawangan via project name (-p <branch>).
+  # Contoh volume akhir: sel_mara_data_branch, hq_mara_data_branch.
+  mara_data_branch:
+    driver: local

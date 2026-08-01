@@ -6,13 +6,20 @@
 # see docs/architecture/13-deployment-architecture.md §13.1 and
 # docs/architecture/11-security-architecture.md §11.3.
 #
-# These defaults intentionally match infrastructure/compose/docker-compose.mara.yml
-# so `docker compose up` + this file work together out of the box for local dev.
+# These defaults intentionally match infrastructure/compose/branches/
+# docker-compose.stack.yml (per-branch databases) — the HQ branch database
+# `mara_hq` on port 5432. Set MARA_DATABASE__PRIMARY_DSN / MARA_BRANCH_CODE in
+# the environment to point this instance at a different branch database.
 
 environment = "dev"
 
+[branch]
+code = "hq"
+name = "Ibu Pejabat"
+state = "Wilayah Persekutuan"
+
 [database]
-primary_dsn = "postgresql+asyncpg://mara:mara@localhost:5432/mara_platform"
+primary_dsn = "postgresql+asyncpg://mara:mara@localhost:5432/mara_hq"
 dify_dsn = "postgresql+asyncpg://dify:dify@localhost:5433/dify"
 
 [object_storage]
