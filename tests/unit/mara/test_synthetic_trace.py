@@ -109,9 +109,12 @@ class TestRunSyntheticTrace:
 
     @pytest.mark.asyncio
     async def test_run_synthetic_trace_compiles_and_invokes(self) -> None:
+        # postgres_checkpointer is imported lazily inside run_synthetic_trace
+        # (shared/workflow_engine/synthetic_trace.py), so patch it at its source
+        # module (checkpointer), not as an attribute of synthetic_trace.
         with (
             patch(
-                'shared.workflow_engine.synthetic_trace.postgres_checkpointer',
+                'shared.workflow_engine.checkpointer.postgres_checkpointer',
                 side_effect=_in_memory_checkpointer,
             ),
             patch(
@@ -128,7 +131,7 @@ class TestRunSyntheticTrace:
         """Verify that postgres_checkpointer is actually called with the
         settings object."""
         with patch(
-            'shared.workflow_engine.synthetic_trace.postgres_checkpointer',
+            'shared.workflow_engine.checkpointer.postgres_checkpointer',
             side_effect=_in_memory_checkpointer,
         ) as mock_checkpointer:
             with patch(

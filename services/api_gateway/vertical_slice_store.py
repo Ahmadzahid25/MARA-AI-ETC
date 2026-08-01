@@ -9,6 +9,7 @@ Provides a single repository interface with two implementations:
 from __future__ import annotations
 
 import hashlib
+import json
 import uuid
 from datetime import UTC, datetime
 from typing import Any, Protocol
@@ -304,8 +305,19 @@ class InMemoryVerticalSliceStore:
 
 
 class AsyncpgVerticalSliceStore:
-    def __init__(self, pool: asyncpg.Pool) -> None:
+    """DB-backed store against the per-branch schema
+    (infrastructure/compose/init/branch-init.sql).
+
+    ``branch_code`` identifies which branch database this store is writing to —
+    it is stamped onto ``mara_users.branch_code`` and every ``audit_memory``
+    row, and feeds ``generate_reference_no()`` for application reference
+    numbers. Supplied at startup from ``settings.branch.code`` so audit and
+    reference numbering stay consistent per branch.
+    """
+
+    def __init__(self, pool: asyncpg.Pool, branch_code: str = 'hq') -> None:
         self.pool = pool
+        self.branch_code = branch_code
 
     async def create_user(
         self,
@@ -319,8 +331,10 @@ class AsyncpgVerticalSliceStore:
         try:
             row = await self.pool.fetchrow(
                 """
-                INSERT INTO mara_users (id, full_name, email, password_hash, role)
-                VALUES ($1::uuid, $2, $3, $4, $5)
+                INSERT INTO mara_users (
+                    id, full_name, email, password_hash, role, branch_code
+                )
+                VALUES ($1::uuid, $2, $3, $4, $5, $6)
                 RETURNING id::text AS user_id, full_name, email, role, created_at
                 """,
                 user_id,
@@ -328,6 +342,7 @@ class AsyncpgVerticalSliceStore:
                 email,
                 password_hash,
                 role.value,
+                self.branch_code,
             )
         except asyncpg.UniqueViolationError:
             return None
@@ -390,10 +405,21 @@ class AsyncpgVerticalSliceStore:
 
         async with self.pool.acquire() as conn:
             async with conn.transaction():
-                await conn.execute(
+                # Guna INSERT ... ON CONFLICT supaya satu pemohon boleh hantar
+                # berbilang permohonan (cth selepas REJECTED/WITHDRAWN) tanpa
+                # UniqueViolation pada ic_number / ssm_number. Profil &
+                # perniagaan sedia ada dikemas kini dengan data terkini.
+                applicant_id_row = await conn.fetchrow(
                     """
                     INSERT INTO applicants (id, user_id, full_name, ic_number, phone, email, state)
                     VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)
+                    ON CONFLICT (ic_number) DO UPDATE SET
+                        full_name = EXCLUDED.full_name,
+                        phone = EXCLUDED.phone,
+                        email = EXCLUDED.email,
+                        state = EXCLUDED.state,
+                        updated_at = now()
+                    RETURNING id
                     """,
                     applicant_id,
                     owner_user_id,
@@ -403,13 +429,23 @@ class AsyncpgVerticalSliceStore:
                     applicant['email'],
                     applicant['state'],
                 )
-                await conn.execute(
+                assert applicant_id_row is not None
+                applicant_id = str(applicant_id_row['id'])
+
+                business_id_row = await conn.fetchrow(
                     """
                     INSERT INTO businesses (
                         id, applicant_id, business_name, ssm_number, sector,
                         years_operating, monthly_revenue_avg
                     )
                     VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)
+                    ON CONFLICT (ssm_number) DO UPDATE SET
+                        business_name = EXCLUDED.business_name,
+                        sector = EXCLUDED.sector,
+                        years_operating = EXCLUDED.years_operating,
+                        monthly_revenue_avg = EXCLUDED.monthly_revenue_avg,
+                        updated_at = now()
+                    RETURNING id
                     """,
                     business_id,
                     applicant_id,
@@ -419,19 +455,23 @@ class AsyncpgVerticalSliceStore:
                     business['years_operating'],
                     business['monthly_revenue_avg'],
                 )
+                assert business_id_row is not None
+                business_id = str(business_id_row['id'])
                 await conn.execute(
                     """
                     INSERT INTO applications (
-                        id, applicant_id, business_id, scheme, amount_requested,
-                        purpose, tenure_months, status, ai_assessment, stage_log,
-                        decision_notes, created_at, updated_at
+                        id, reference_no, applicant_id, business_id, scheme,
+                        amount_requested, purpose, tenure_months, status,
+                        ai_assessment, stage_log, decision_notes,
+                        created_at, updated_at
                     )
                     VALUES (
-                        $1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8,
-                        $9::jsonb, $10::jsonb, $11, $12, $13
+                        $1::uuid, generate_reference_no($2), $3::uuid, $4::uuid,
+                        $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12, $13, $14
                     )
                     """,
                     application_id,
+                    self.branch_code,
                     applicant_id,
                     business_id,
                     financing['scheme'],
@@ -439,8 +479,10 @@ class AsyncpgVerticalSliceStore:
                     financing['purpose'],
                     financing['tenure_months'],
                     ApplicationStatus.SUBMITTED.value,
-                    ai_assessment,
-                    stage_log,
+                    # asyncpg memerlukan lajur jsonb dihantar sebagai string JSON,
+                    # bukan dict/list Python — serialize di sini.
+                    json.dumps(ai_assessment),
+                    json.dumps(stage_log),
                     '',
                     now,
                     now,
@@ -514,7 +556,17 @@ class AsyncpgVerticalSliceStore:
         )
 
         data = dict(row)
-        workflow = (data.get('ai_assessment') or {}).get('workflow') or {
+        # asyncpg mengembalikan lajur jsonb sebagai str mentah — parse semula
+        # kepada dict/list Python supaya pemanggil dapat struktur yang konsisten
+        # dengan InMemoryVerticalSliceStore.
+        ai_assessment = data.get('ai_assessment')
+        if isinstance(ai_assessment, str):
+            ai_assessment = json.loads(ai_assessment)
+        stage_log = data.get('stage_log')
+        if isinstance(stage_log, str):
+            stage_log = json.loads(stage_log)
+
+        workflow = (ai_assessment or {}).get('workflow') or {
             'state': 'queued',
             'thread_id': application_id,
             'pending_gate': None,
@@ -544,9 +596,9 @@ class AsyncpgVerticalSliceStore:
                 'tenure_months': data['tenure_months'],
             },
             'documents': [dict(d) for d in docs],
-            'ai_assessment': data['ai_assessment'] or {},
+            'ai_assessment': ai_assessment or {},
             'workflow': workflow,
-            'stage_log': data['stage_log'] or [],
+            'stage_log': stage_log or [],
             'decision_notes': data['decision_notes'],
             'decided_by': data['decided_by'],
             'decided_at': data['decided_at'],
@@ -600,8 +652,8 @@ class AsyncpgVerticalSliceStore:
             """,
             application_id,
             new_status,
-            new_ai,
-            new_stage,
+            json.dumps(new_ai),
+            json.dumps(new_stage),
             new_notes,
         )
         return await self.get_application(application_id)
@@ -635,7 +687,7 @@ class AsyncpgVerticalSliceStore:
             status.value,
             reason,
             decided_by,
-            stage_log,
+            json.dumps(stage_log),
         )
         return await self.get_application(application_id)
 
@@ -650,20 +702,25 @@ class AsyncpgVerticalSliceStore:
         workflow_id = application_id
         await self.pool.execute(
             """
-            INSERT INTO audit_memory (workflow_id, actor_id, actor_role, event_type, payload)
-            VALUES ($1::uuid, $2, $3, $4, $5::jsonb)
+            INSERT INTO audit_memory (
+                workflow_id, actor_id, actor_role, branch_code, event_type, payload
+            )
+            VALUES ($1::uuid, $2, $3, $4, $5, $6::jsonb)
             """,
             workflow_id,
             actor,
             'system',
+            self.branch_code,
             action,
-            {
-                'application_id': application_id,
-                'payload_hash': hashlib.sha256(
-                    str(sorted(payload.items())).encode('utf-8')
-                ).hexdigest(),
-                'payload': payload,
-            },
+            json.dumps(
+                {
+                    'application_id': application_id,
+                    'payload_hash': hashlib.sha256(
+                        str(sorted(payload.items())).encode('utf-8')
+                    ).hexdigest(),
+                    'payload': payload,
+                }
+            ),
         )
 
     async def add_document(
